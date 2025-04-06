@@ -23,6 +23,7 @@
     - Java EE
   - 工具链
     - Maven
+    - Tomcat
     - Linux
     - Docker
   - Spring基础
@@ -260,3 +261,140 @@ connection.close(); // 实质上归还了连接而不是立即关闭连接
 
 
 ## 工具链
+
+
+
+
+
+### Tomcat
+
+
+
+#### 概述
+
+Tomcat是Apache Jakarta的开源Web Servlet容器，实现了部分Java EE/Jakarta EE规范
+
+- ≤ Tomcat 9：支持Java EE
+- ≥ Tomcat 10：支持Jakarta EE
+
+常用版本：
+
+- Tomcat 9：支持Java EE 8
+- Tomcat 10：支持部分Jakarta EE 10
+- Tomcat 11：支持部分Jakarta EE 11
+
+注意目标为Tomcat 9的Web应用无法发布在Tomcat 10上
+
+支持的Java EE/Jakarta EE规范有：
+
+- Servlet
+- JSP
+- WebSocket
+
+若需要使用实现了所有Java EE/Jakarta EE规范的Java EE全栈服务器，可参考`WebSphere`、`WebLogic`等
+
+
+
+#### Tomcat 9
+
+可以在官方文档里参考或学习详细的使用方法：[Tomcat 9 文档](https://tomcat.apache.org/tomcat-9.0-doc/index.html)
+
+##### 使用入门
+
+- 安装和确保合适的Java环境
+
+  - 推荐JDK 8运行环境
+
+    较高或较低的版本均可能产生意外的问题
+
+  - 配置`JAVA_HOME`环境变量
+
+- 下载并解压合适的Tomcat包
+
+  如`Core 64-bit Windows.zip`，包含核心jar程序和适用于Windows的已编译本机库、bat脚本等
+
+- 修改或确认`/conf/server.xml`中的端口号（默认为8080）使其处于可用状态
+
+  ```xml
+  <!--默认的配置如下-->
+  <Connector port="8080" protocol="HTTP/1.1"
+                 connectionTimeout="20000"
+                 redirectPort="8443"
+                 maxParameterCount="1000"
+                 />
+  ```
+
+- 解决可能的终端输出乱码问题
+
+  可选的方案有：
+
+  - 修改`/conf/logging.properties`中的`java.util.logging.ConsoleHandler.encoding`为本机默认编码
+  - 修改启动脚本中的JVM参数
+
+- 使用`/bin`目录下的`startup.bat`和`shutdown.bat`等脚本启动或关闭Tomcat服务器
+
+- 访问http://localhost:8080确认服务器运行状况
+
+##### Context
+
+在Tomcat中，Context概指一个Web应用程序，在一个Tomcat可以同时存在多个Context
+
+##### 目录结构
+
+- `/bin`：脚本等可执行文件，用于启动、关闭、管理Tomcat服务器
+- `/conf`：配置文件，核心配置文件为`server.xml`
+- `/logs`：日志文件
+- `/webapps`：Web应用程序存储目录
+  - `/ROOT`：默认Web应用目录
+    - `/WEB-INF`
+      - `/classes`：Web应用的Java类文件和资源
+      - `/lib`：Web应用Java程序依赖的Jar文件
+      - `web.xml`：Web应用核心描述文件
+    - `/static_resources_dir_1...`：更多的静态文件
+    - `*.html、*.js、*.jsp...`：静态资源文件等
+  - `/app_dir_1...`：更多的Web应用
+- `/lib`：Web应用运行所需的Jar依赖文件包
+- `/temp`：JVM临时文件目录
+- `/work`：Tomcat的临时工作目录，JSP编译后的`.java`、`.class`等文件也存储于此
+
+##### 部署Web应用
+
+- 静态部署：在Tomcat启动前部署或更新Web应用
+- 动态部署：在Tomcat运行时部署或更新Web应用，依赖Tomcat的配置和自动部署工具
+
+可以使用以下方法部署待发布的Web应用
+
+- 复制Web应用文件夹到`/webapps`或其子文件夹
+
+- 复制WAR存档的Web应用到`/webapps`或其子文件夹
+
+  Tomcat会自动解压该WAR存档，但更新Web应用时应删除原先的已解压的文件夹
+
+- 使用Tomcat Manager进行图形化的管理
+
+##### Manager
+
+Tomcat Manager时一个Tomcat内置的Web服务，提供了以下图形化便捷功能：
+
+- 远程部署、更新Web应用
+- 管理Web应用
+- 服务器资源和运行状态的统计
+- SSL/TLS管理
+
+等等
+
+##### 其他功能
+
+Tomcat支持的其他常用功能包括：
+
+- WebSocket支持
+- 虚拟主机
+- Realm支持
+- JNDI
+- JSP支持
+- SSL/TLS支持
+- CGI
+- 反向代理
+- 负载均衡
+- 集群支持
+- Windows服务
