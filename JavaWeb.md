@@ -266,6 +266,85 @@ connection.close(); // 实质上归还了连接而不是立即关闭连接
 
 
 
+### Maven
+
+
+
+#### 概述
+
+Maven是由Apache托管的用于简化Java项目构建流程的开源工具
+
+##### 为什么使用Maven
+
+- 传统项目依赖与多项目间依赖手动管理困难
+- 不同开发环境的项目结构互相冲突
+- 手动和非统一的项目构建、测试、打包、发布流程混乱
+
+##### Maven的功能
+
+- 依赖管理
+
+  统一的便捷的项目依赖管理与项目间依赖管理
+
+- 项目构建
+
+  统一的编译、测试、打包和发布流程
+
+- 项目结构
+
+  统一的便于管理、扩展、维护的项目结构
+
+##### Maven模型
+
+![Maven模型](JavaWeb笔记图片/Maven模型.png)
+
+
+
+#### 部署
+
+##### 安装
+
+Windows环境无需安装守护进程时仅解压即可
+
+##### 配置
+
+- 环境变量
+
+  - `JAVA_HOME`：用于Maven运行所需的Java环境
+  - `MAVEN_HOME`：用于Maven自身及其他依赖Maven的应用
+  - `PATH`：用于命令行，值应为`%MAVEN_HOME%\bin`
+
+- 全局配置文件`%MAVEN_HOME%\conf\settings.xml`
+
+  - 本地仓库`settings.localRepository`
+
+    默认值`${user.home}/.m2/repository`
+
+  - 镜像仓库`settings.mirrors`
+
+    Maven默认远程中央仓库地址`repo.maven.apache.org/maven2/`
+
+    使用如下配置增加阿里云镜像仓库
+
+    ```xml
+    <mirror>
+        <id>nexus-aliyun</id>
+        <mirrorOf>central</mirrorOf>
+        <name>Nexus aliyun</name>
+        <url>http://maven.aliyun.com/nexus/content/groups/public</url>
+    </mirror>
+    ```
+
+- 用户配置文件`settings.xml`
+
+  与全局配置文件格式相同，用于覆盖全局配置文件配置，位于本地仓库路径下
+
+  当本地仓库路径未修改时默认路径即为`${user.home}/.m2/settings.xml`
+
+
+
+
+
 ### Tomcat
 
 
