@@ -268,6 +268,8 @@ connection.close(); // 实质上归还了连接而不是立即关闭连接
 
 ### Maven
 
+可在Apache Maven官网获得更详细的[文档](https://maven.apache.org/guides/)
+
 
 
 #### 概述
@@ -340,6 +342,246 @@ Windows环境无需安装守护进程时仅解压即可
   与全局配置文件格式相同，用于覆盖全局配置文件配置，位于本地仓库路径下
 
   当本地仓库路径未修改时默认路径即为`${user.home}/.m2/settings.xml`
+
+
+
+#### 目录结构
+
+Maven提供了一系列标准的项目目录结构
+
+- `src`/    源文件
+  - `main`/
+    - `java`/
+    - `resources`/
+    - `webapp`/
+  - `test`/
+    - `java`/
+    - `resources`/
+- `target`/    构建输出
+- `pom.xml`    POM声明
+
+
+
+#### 命令
+
+##### 原型
+
+可使用原型（Archetype）快速创建标准的目录结构的项目
+
+参考`mvn archetype:generate`
+
+##### 构建
+
+在Maven项目根目录（`pom.xml`所在文件夹）可执行若干构建命令
+
+- `mvn clean`：清除构建输出`target/`
+- `mvn compile`：编译源代码文件并输出`.class`文件与资源文件到`target/`
+- `mvn test`：编译测试源代码文件并输出`.class`文件与资源文件到`target/`，执行测试代码并输出结果报告到`target/surefire-reports`
+- `mvn package`：编译、测试源代码与资源文件并打包为`.jar`文件输出到`target/`
+- `mvn install`：编译、测试、打包源代码与资源文件并存储到本地仓库
+
+
+
+#### IDEA整合
+
+IDEA通常使用自带Maven，如果需要使用自行配置的Maven应通过IDEA设置进行修改，注意IDEA支持的Maven版本存在滞后
+
+在IDEA运行/调试配置中可新增Maven运行/调试，用于在运行/调试时强制使用Maven构建插件
+
+在使用IDEA新建项目时可选择Maven Archetype使用Maven原型功能快速创建标准目录结构的项目
+
+
+
+#### POM
+
+POM即项目对象模型（Project Object Model），是Maven识别、解析、管理项目的依据，由`pom.xml`进行声明
+
+##### 内容
+
+`pom.xml`支持的内容如下：
+
+```xml
+<project
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    
+    <!-- The Basics -->
+    <groupId>...</groupId>
+    <artifactId>...</artifactId>
+    <version>...</version>
+    <packaging>...</packaging>
+    <dependencies>...</dependencies>
+    <parent>...</parent>
+    <dependencyManagement>...</dependencyManagement>
+    <modules>...</modules>
+    <properties>...</properties>
+    
+    <!-- Build Settings -->
+    <build>...</build>
+    <reporting>...</reporting>
+    
+    <!-- More Project Information -->
+    <name>...</name>
+    <description>...</description>
+    <url>...</url>
+    <inceptionYear>...</inceptionYear>
+    <licenses>...</licenses>
+    <organization>...</organization>
+    <developers>...</developers>
+    <contributors>...</contributors>
+    
+    <!-- Environment Settings -->
+    <issueManagement>...</issueManagement>
+    <ciManagement>...</ciManagement>
+    <mailingLists>...</mailingLists>
+    <scm>...</scm>
+    <prerequisites>...</prerequisites>
+    <repositories>...</repositories>
+    <pluginRepositories>...</pluginRepositories>
+    <distributionManagement>...</distributionManagement>
+    <profiles>...</profiles>
+</project>
+```
+
+- `modelVersion`：POM版本，值应为`4.0.0`，Maven目前仅支持该版本
+- `packaging`：项目打包（生命周期`package`）方式，默认值`jar`，常见值如`jar`、`war`、`rar`、`pom`等，IDEA会识别该值以判断项目类型
+
+POM的最小内容应包含：
+
+- `project`根
+- `modelVersion`
+- `groupId`
+- `artifactId`
+- `version`
+
+##### Maven坐标
+
+Maven项目的唯一标识，由`groupId`、`artifactId`、`version`组成
+
+
+
+#### 依赖
+
+Maven项目通过在`pom.xml`声明依赖和在本地或远程仓库中存储的依赖来进行依赖管理
+
+##### 依赖传递
+
+若工件A**直接依赖**工件B，工件B直接依赖工件C，则默认情况下工件A**间接依赖**工件C
+
+##### 依赖调解
+
+项目的所有依赖组成依赖树，可通过命令`mvn dependency:tree`查看依赖树
+
+当依赖树中存在多个`groupId`和`artifactId`相同的依赖时将发生依赖冲突，通过依赖调解解决冲突
+
+规则如下：
+
+- 同一`pom.xml`文件相同依赖后声明的优先
+- 在依赖树上深度低者优先
+- 在依赖树上同一深度先声明的优先
+
+##### 可选依赖
+
+通过声明某依赖的`denpendency.optional`值为`true` ，使得该项目的该依赖对依赖该项目的项目隐藏
+
+简单来说，就是使当前项目的某依赖无法被传递
+
+`optional`的默认值是`false`
+
+```xml
+<dependency>
+    <groupId>com.example.web</groupId>
+    <artifactId>lib</artifactId>
+    <version>1.0</version>
+    <optional>true</optional>
+</dependency>
+```
+
+##### 排除依赖
+
+通过对某依赖声明`denpendency.exclusions`的一个或多个`exclusion`，使得从该依赖传递的一个或多个间接依赖被排除
+
+在`exclusion`中仅需声明`groupId`和`artifactId`
+
+```xml
+<dependency>
+    <groupId>com.example.web</groupId>
+    <artifactId>lib</artifactId>
+    <version>1.0</version>
+    <exclusions>
+        <exclusion>
+            <groupId>com.example.util</groupId>
+            <artifactId>util</artifactId>
+        </exclusion>
+    </exclusions>
+</dependency>
+```
+
+##### 依赖范围
+
+通过`denpendency.scope`声明依赖的作用范围
+
+`scope`的默认值为`compile`，可选的值有
+
+- `compile`：参与所有编译、测试编译、测试执行和打包
+- `provided`：参与编译、测试编译、测试执行，但不参与打包，用于目标运行环境已提供该依赖的情况，如Servlet API
+- `runtime`：不参与编译、测试编译，但参与测试执行和打包，常用于仅在运行时所需的依赖，如JDBC
+- `test`：参与测试编译、测试执行，不参与编译和打包
+- `system`
+- `import`
+
+```xml
+<dependency>
+    <groupId>com.example.web</groupId>
+    <artifactId>lib</artifactId>
+    <version>1.0</version>
+    <scope>compile</scope>
+</dependency>
+```
+
+##### 依赖范围的传递
+
+当某项目的某依赖声明的依赖范围，且该依赖对其依赖也声明了依赖范围，那么该项目对该间接依赖的依赖范围将通过以下规则获得
+
+- `provided`和`test`声明的依赖无法被传递，因此声明了`provided`或`test`的间接依赖项将被忽略
+- 最终的依赖范围将取两个依赖范围的交集
+
+简单来说，如果A依赖B，B依赖C，那么C对于A的依赖范围如下表所示
+
+| A声明B的范围 \ B声明C的范围 | compile  | provided | runtime  | test |
+| --------------------------- | -------- | -------- | -------- | ---- |
+| compile                     | compile  | 忽略     | runtime  | 忽略 |
+| provided                    | provided | 忽略     | provided | 忽略 |
+| runtime                     | runtime  | 忽略     | runtime  | 忽略 |
+| test                        | test     | 忽略     | test     | 忽略 |
+
+
+
+#### 生命周期与插件
+
+Maven生命周期是指构建流程中的各个阶段的总和，每个阶段都需要一个特定的插件实现，每个阶段的执行必须依赖前一个阶段的执行结果
+
+Maven共有三类生命周期：
+
+- clean：用于清理
+- default：用于编译、测试、打包、安装、部署等
+- site：生成报告、发布站点等
+
+![image-20250423162954695](JavaWeb笔记图片/Maven生命周期.png)
+
+常用的生命周期阶段：
+
+- clean 移除上一次构建生成的文件
+- compile 编译项目源代码
+- test 使用合适的单元测试框架运行测试
+- package 将编译后的文件打包
+- install 安装项目到本地仓库
+
+通过执行特定的Maven命令即可通过特定的Maven插件执行指定的阶段
+
+可通过在`pom.xml`中声明插件来实现更复杂的功能
 
 
 
