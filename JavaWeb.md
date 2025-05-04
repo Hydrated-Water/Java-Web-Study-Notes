@@ -470,6 +470,42 @@ POM的最小内容应包含：
 
 Maven项目的唯一标识，由`groupId`、`artifactId`、`version`组成
 
+##### 属性
+
+POM中类似常量的概念，通过通过`${属性名}`访问，如`${project.version}`
+
+- 自定义属性
+
+  通过在POM中使用`properties`标签声明，如
+
+  ```xml
+  <properties>
+      <myproject.version>${project.version}</project-version>
+      <myproject.name>app</myproject.name>
+      <foobar>12345</foobar>
+  </properties>
+  ```
+
+- Project属性，属性名以`project.`开头，如`project.version`即POM中`version`标签声明的值
+
+- Settings属性
+
+  由Maven的`settings.xml`声明的属性值，属性名以`settings.`开头
+
+- Java系统属性
+
+  可通过`System.getProperties()`访问的属性，属性名通常以`java.`，如`java.home`
+
+- 环境变量属性
+
+  系统/Shell环境变量，属性名以`env.`开头，如`env.PATH`
+
+  注意环境变量名必须为大写，包括在不区分大小写的Windows上以小写声明的环境变量
+
+可使用命令`mvn help:system`查看支持的Java系统属性和环境变量
+
+属性可以继承
+
 
 
 #### 依赖
@@ -683,7 +719,7 @@ Maven提供了继承的功能，可用于在多模块构建管理中，让多个
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <!-- 从父POM中继承groupId和version的值，因此此处可无需重复声明 -->
+    <!-- 从父POM中继承groupId和version的值，因此此处可无需重复声明，或此处可覆盖父POM的值 -->
     <artifactId>app</artifactId>
     
     <dependencies>
@@ -772,6 +808,26 @@ Maven提供了继承的功能，可用于在多模块构建管理中，让多个
   ```
 
 - 继承和聚合可同时使用，且通常共同使用；在一个多模块的项目中，父模块同时承担着通过继承功能管理多模块项目依赖和通过聚合功能管理多模块构建流程的功能
+
+
+
+#### 版本管理
+
+##### 版本号约定
+
+![image-20250504201042471](C:\CRIM\Program\Web\Resources\Documentation\JavaWeb-all\JavaWeb笔记图片\版本号约定.png)
+
+
+
+#### 更多
+
+- 资源文件处理 `build.resources`
+- 多环境 `profiles`
+- 跳过测试
+  - IDEA跳过测试选项
+  - 命令参数`-D skipTests`
+  - `build.plugin`中配置
+- 远程仓库服务器的部署、配置与使用
 
 
 
