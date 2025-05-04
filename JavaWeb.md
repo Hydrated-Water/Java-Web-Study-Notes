@@ -405,24 +405,36 @@ POM即项目对象模型（Project Object Model），是Maven识别、解析、�
          xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    
+    <!-- POM版本，值应为"4.0.0"，Maven目前仅支持该版本 -->
     <modelVersion>4.0.0</modelVersion>
     
     <!-- The Basics -->
+    
+    <!-- 项目的坐标 groupId:artifactId:version -->
     <groupId>...</groupId>
     <artifactId>...</artifactId>
     <version>...</version>
+    <!-- 项目打包（生命周期"package"）方式，与项目类型相关，默认值"jar"，常见值如"jar"、"war"、"rar"、"pom"等，IDEA会识别该值以判断项目类型 -->
     <packaging>...</packaging>
+    <!-- 依赖声明 -->
     <dependencies>...</dependencies>
+    <!-- 用于声明继承的父POM -->
     <parent>...</parent>
+    <!-- 用于继承中父POM进行依赖管理 -->
     <dependencyManagement>...</dependencyManagement>
+    <!-- 用于聚合模块的子模块声明 -->
     <modules>...</modules>
+    <!-- 子模块声明 -->
     <properties>...</properties>
     
     <!-- Build Settings -->
+    
     <build>...</build>
     <reporting>...</reporting>
     
     <!-- More Project Information -->
+    
     <name>...</name>
     <description>...</description>
     <url>...</url>
@@ -442,11 +454,9 @@ POM即项目对象模型（Project Object Model），是Maven识别、解析、�
     <pluginRepositories>...</pluginRepositories>
     <distributionManagement>...</distributionManagement>
     <profiles>...</profiles>
+    
 </project>
 ```
-
-- `modelVersion`：POM版本，值应为`4.0.0`，Maven目前仅支持该版本
-- `packaging`：项目打包（生命周期`package`）方式，默认值`jar`，常见值如`jar`、`war`、`rar`、`pom`等，IDEA会识别该值以判断项目类型
 
 POM的最小内容应包含：
 
@@ -582,6 +592,186 @@ Maven共有三类生命周期：
 通过执行特定的Maven命令即可通过特定的Maven插件执行指定的阶段
 
 可通过在`pom.xml`中声明插件来实现更复杂的功能
+
+
+
+#### 多模块
+
+Maven支持项目以多模块的方式管理项目的编码、编译、测试、运行等构建流程
+
+##### 原始
+
+通过仓库和依赖管理实现多模块的构建管理，通过手动管理的方式按照合理顺序从底层到高层对模块进行构建和安装、发布
+
+如对于依赖A-B、B-C、B-D、D-E，当D模块更新时，需要依次对D、B、A模块分别进行编译、测试、打包、安装、发布的构建流程，使得上层模块能正确使用下层已经更新了的模块
+
+##### 聚合
+
+通过Maven定义聚合模块，在聚合模块中声明其所有子模块，使得对聚合模块的构建等效于对其所有子模块的合理顺序的依次构建，实现多模块构建管理的自动化，即执行聚合模块的单个构建命令等效于对所有子模块执行有顺序的构建命令
+
+构建顺序通常由Maven通过依赖树决定，使得依赖树中更深的子模块更早构建，如果子模块不互相依赖，那么构建顺序由模块的声明顺序决定
+
+常见项目结构：
+
+- `App/`
+  - `SubApp1`
+    - `src/`
+    - `pom.xml` 子模块POM声明
+  - `SubApp2`
+    - `src/`
+    - `pom.xml` 子模块POM声明
+  - `pom.xml` 聚合模块POM声明
+
+或
+
+- `App/`
+  - `pom.xml` 聚合模块POM声明
+- `SubApp1`
+  - `src/`
+  - `pom.xml` 子模块POM声明
+- `SubApp2`
+  - `src/`
+  - `pom.xml` 子模块POM声明
+
+聚合模块声明：
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.example.pom</groupId>
+  <artifactId>pom</artifactId>
+  <version>1.0</version>
+
+  <!-- 聚合模块必须声明打包方式为"pom" -->
+  <packaging>pom</packaging>
+
+  <!-- 通过modules标签声明子模块，值为各子模块的相对目录 -->
+  <modules>
+    <!-- 该子模块位于聚合模块目录内 -->
+    <module>Module A</module>
+    <!-- 该子模块位于聚合模块目录旁 -->
+    <module>../Module B</module>
+  </modules>
+
+</project>
+```
+
+##### 继承
+
+Maven提供了继承的功能，可用于在多模块构建管理中，让多个子模块POM继承同一个父POM，以用于简化重复的配置，处理可能的依赖版本冲突等问题
+
+- 在子模块的`pom.xml`中声明继承
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    
+    <!-- 声明继承 -->
+    <parent>
+        <groupId>com.example.pom</groupId>
+        <artifactId>parent</artifactId>
+        <version>1.0</version>
+        <!-- 非必须，Maven会先尝试从相对路径中获取，再尝试从仓库中获取-->
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <!-- 从父POM中继承groupId和version的值，因此此处可无需重复声明 -->
+    <artifactId>app</artifactId>
+    
+    <dependencies>
+        <dependency>
+            <!-- 从父POM中继承version值，因此此处可无需重复声明 -->
+            <groupId>com.example.lib</groupId>
+            <artifactId>lib</artifactId>
+        </dependency>
+    </dependencies>
+
+</project>
+```
+
+- 父POM应另属于一个新模块，声明父POM
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.example.pom</groupId>
+    <artifactId>parent</artifactId>
+    <version>1.0</version>
+    
+    <!-- 必须声明打包方式为"pom" -->
+    <packaging>pom</packaging>
+    
+    <!-- 通过该标签声明依赖版本，使得子POM在声明依赖时无需指定版本 -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.example.lib</groupId>
+                <artifactId>lib</artifactId>
+                <version>1.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.example.lib</groupId>
+                <artifactId>lib2</artifactId>
+                <version>2.0</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <!-- 对于build.plugins，同样可通过build.pluginManagement标签来声明plugin进行插件管理 -->
+    
+</project>
+```
+
+- 可被继承的POM标签包含
+
+  ```markdown
+  - groupId
+  - version
+  - description
+  - url
+  - inceptionYear
+  - organization
+  - licenses
+  - developers
+  - contributors
+  - mailingLists
+  - scm
+  - issueManagement
+  - ciManagement
+  - properties
+  - dependencyManagement
+  - dependencies
+  - repositories
+  - pluginRepositories
+  - build
+    - plugin executions with matching ids
+    - plugin configuration
+    - etc.
+  - reporting
+  ```
+
+- 不会被继承的POM标签包含
+
+  ```markdown
+  - artifactId
+  - name
+  - prerequisites
+  ```
+
+- 继承和聚合可同时使用，且通常共同使用；在一个多模块的项目中，父模块同时承担着通过继承功能管理多模块项目依赖和通过聚合功能管理多模块构建流程的功能
 
 
 
