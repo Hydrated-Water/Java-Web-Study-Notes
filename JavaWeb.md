@@ -6,6 +6,8 @@
 
 本笔记始建于2025/03/25，用于总和JavaWeb所有必须的技术栈
 
+对于相对复杂的知识体系，本笔记将尽可能按“使用方法”到“原理细节”的顺序进行内容组织，做到先知其然，后知其所以然的阶段性系统性学习
+
 内容组织结构如下：
 
 - 前端
@@ -26,16 +28,12 @@
     - Tomcat
     - Linux
     - Docker
-  - Spring基础
-    - Spring Framework
-    - SpringBoot
+  - Spring 基础
   - 数据库
     - MySQL
     - MyBatis
     - MyBatis-Plus
     - Redis
-  - 云
-    - SpringCloud
 
 
 
@@ -965,3 +963,190 @@ Tomcat支持的其他常用功能包括：
 - 负载均衡
 - 集群支持
 - Windows服务
+
+
+
+
+
+
+
+## Spring 基础
+
+
+
+
+
+### Spring Boot 入门
+
+<u>知其然</u>
+
+
+
+#### 概述
+
+##### 介绍
+
+Spring Boot是Spring提供的用于快速构建可独立运行的Spring应用程序的开发框架，具有入门简单、开箱即用、约定大于配置等特点
+
+##### Hello World
+
+构建Spring Boot Hello World应用，参考[Spring Quick Start](https://spring.io/quickstart)或更详细的[Spring Boot First Application](https://docs.spring.io/spring-boot/tutorial/first-application/index.html)
+
+##### 指南
+
+可以在Spring官网中检索入门[指南](https://spring.io/guides)，这些指南面向新手，以各种特定的企业应用需求进行分类以用于检索
+
+##### 支持
+
+Spring Boot 3.4.5需要：
+
+- Java 17+
+- Spring Framework 6.2.6+
+- Maven 3.6.3+ 或 Gradle 7.6.4+ / 8.4+
+
+并提供嵌入式Servlet（5.0+ / 6.0）容器支持：
+
+- Tomcat 10.1
+- Jetty 12.0
+- Undertow 2.3
+
+而对于Spring Boot 2，通常仅需Java 8
+
+
+
+
+
+### Spring Boot 进阶
+
+<u>知其所以然</u>
+
+
+
+#### 独立应用程序原理
+
+##### 概述
+
+Spring Boot使用了多种技术，使得开发者可以将应用程序打包成单个`jar`文件，通过简单的命令`java -jar example.jar`启动，或者将应用程序打包成单个`war`文件，以支持简单命令启动`java -jar example.war`或部署到Tomcat服务器（仅需较少的配置而不是大量的变更）
+
+对于开发者而言，使用上述技术仅需在`pom.xml`配置构建插件，如
+
+```xml
+<build>
+	<plugins>
+		<plugin>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-maven-plugin</artifactId>
+		</plugin>
+	</plugins>
+</build>
+```
+
+##### 文件结构
+
+单个可执行`jar`文件的打包通常需要处理同包同名`class`文件冲突。传统上常见的技术为`Shaded jar`（又称`Fat jar`或`Uber jar`），它将所有需要的类文件打包到同一`jar`文件中，并通过重命名包路径来解决冲突。
+
+而Spring Boot通过嵌套的`jar`文件来解决这一问题，它的文件结构通常如下：
+
+对于`jar`文件
+
+```markdown
+example.jar
+ |
+ +-META-INF    # JAR规范中的元数据文件夹
+ |  +-MANIFEST.MF    # JAR规范中的清单文件
+ +-org    # 依照JAR规范存储的class文件
+ |  +-springframework
+ |     +-boot
+ |        +-loader
+ |           +-<spring boot loader classes> # Spring Boot启动类
+ +-BOOT-INF    # 非JAR规范存储的文件，需由Spring Boot类加载器
+    +-classes
+    |  +-mycompany
+    |     +-project
+    |        +-YourClasses.class    # 包含main方法的类
+    +-lib
+       +-dependency1.jar    # 外部依赖项，需由Spring Boot类加载器加载
+       +-dependency2.jar
+```
+
+对于`war`文件
+
+```markdown
+example.war
+ |
+ +-META-INF
+ |  +-MANIFEST.MF
+ +-org
+ |  +-springframework
+ |     +-boot
+ |        +-loader
+ |           +-<spring boot loader classes>
+ +-WEB-INF    # Servlet规范中的文件夹
+    +-classes
+    |  +-com
+    |     +-mycompany
+    |        +-project
+    |           +-YourClasses.class    # 包含main方法的类
+    +-lib    # 存储无论何时都需要的外部依赖项
+    |  +-dependency1.jar
+    |  +-dependency2.jar
+    +-lib-provided    # 存储在独立运行时需要，部署到Web容器时不需要的外部依赖项
+       +-servlet-api.jar
+       +-dependency3.jar
+```
+
+##### 启动与类加载
+
+JAR规范并未定义嵌套jar文件的启动和加载，且Spring Boot的特有`jar`文件结构使得其中的大部分类文件需显式地通过类加载器加载，因此Spring Boot有自己的启动和加载机制。
+
+Spring Boot定义了`org.springframework.boot.loader.launch.Launcher`及其三个子类`JarLauncher`、`WarLauncher`和`PropertiesLauncher`来作为实际的启动类，并加载所需要的类加载器和类
+
+由Spring Boot构建插件自动生成的`MANIFEST.MF`清单文件常包含内容如下：
+
+对于`jar`文件
+
+```markdown
+Main-Class: org.springframework.boot.loader.launch.JarLauncher
+Start-Class: com.mycompany.project.MyApplication
+```
+
+对于`war`文件
+
+```
+Main-Class: org.springframework.boot.loader.launch.WarLauncher
+Start-Class: com.mycompany.project.MyApplication
+```
+
+其中`Main-Class`是JAR规范规定的入口类声明，而`Start-Class`是Spring Boot自定义的字段
+
+`NestedJarFile`类是Spring Boot支持从嵌套的`jar`文件中加载类的核心支持，它继承至`java.util.jar.JarFile`，它无需解压外层`jar`文件到磁盘或将整个`jar`文件读入内存处理，即可读取内层`jar`中的类文件，这是因为它依靠类文件在`jar`压缩文件中的偏移量来寻找需要的类文件
+
+```markdown
+myapp.jar
++-------------------+-------------------------+
+| /BOOT-INF/classes | /BOOT-INF/lib/mylib.jar |
+|+-----------------+||+-----------+----------+|
+||     A.class      |||  B.class  |  C.class ||
+|+-----------------+||+-----------+----------+|
++-------------------+-------------------------+
+ ^                    ^           ^
+ 0063                 3452        3980
+```
+
+如上所示，类A、B、C的类文件的查找都依靠统一的偏移量
+
+##### 流程
+
+综上所述，整个流程可以概述如下：
+
+1. Spring Boot Maven或Gradle打包插件将应用打包成具有特定格式的`jar`或`war`文件
+2. 使用`java -jar`命令启动后，JVM运行在`MANIFEST.MF`中声明的Spring Boot启动类
+3. 启动类加载Spring Boot类加载器和`NestedJarFile`，从对应的文件夹和嵌套的`jar`文件中加载开发者编写编译的类文件和外部依赖项的类文件
+4. 开发者编写的主类被通过反射地方式执行，Spring Boot应用正式启动
+
+##### 局限性
+
+上述技术虽然提供了诸多便利，但仍存在一定的局限性：
+
+- 被嵌套的内层`jar`文件不能被再次压缩，而是“仅存储”（外层`jar`文件中的其他内容和内层`jar`文件中的内容可以被正常压缩），否则`NestedJarFile`将无法定位内层`jar`文件中的类文件
+- 被嵌套的内层`jar`文件中的类不能正常使用`ClassLoader.getSystemClassLoader()`，它应该使用`Thread.getContextClassLoader()`，因此依赖系统类加载器的功能将无法使用，如 `java.util.Logging`
