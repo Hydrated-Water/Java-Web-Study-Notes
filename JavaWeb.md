@@ -976,6 +976,200 @@ Tomcat支持的其他常用功能包括：
 
 
 
+### Spring MVC 入门
+
+<u>知其然</u>
+
+
+
+#### 概述
+
+##### 介绍
+
+Spring MVC全称Spring Web MVC，是基于Servlet API的Web框架
+
+##### Hello World
+
+构建Spring Boot Hello World应用，参考[Spring Quick Start](https://spring.io/quickstart)或更详细的[Spring Boot First Application](https://docs.spring.io/spring-boot/tutorial/first-application/index.html)
+
+编写表现层控制器类代码，注解`@Controller`声明该类为控制类，使用请求匹配注解`@RequestMapping("/helloworld")`使方法绑定到路径`/helloworld`，使用注解`@ResponseBody`使方法返回值作为响应体数据内容，方法返回一个String类型的JSON格式文本
+
+```java
+@Controller
+public class HelloWorldController {
+    
+    @RequestMapping("/helloworld")
+    @ResponseBody
+    public String helloWorld(){
+        return "{'data':'Hello World!'}";
+    }
+    
+}
+```
+
+向预定路径发送GET请求
+
+```http
+GET http://localhost:8080/helloworld
+```
+
+得到响应结果
+
+```bash
+HTTP/1.1 200 
+Content-Type: text/plain;charset=UTF-8
+Content-Length: 23
+Date: Wed, 31 Jul 2024 06:53:33 GMT
+Keep-Alive: timeout=60
+Connection: keep-alive
+
+{'data':'Hello World!'}
+```
+
+
+
+#### 路由
+
+##### 概述
+
+可以通过`@RequestMapping`等注解声明端点（endpoint）映射，以使控制器方法匹配特定的HTTP方法、URL、请求参数、请求头等
+
+##### 请求方法映射
+
+使用注解`@RequestMapping`的`method`属性限定匹配一个或多个请求方法，或使用便捷的注解如`@GetMapping`、`@PostMapping`、`@PutMapping`、`@DeleteMapping`等注解实现相同的效果
+
+```java
+@RequestMapping(value = "/bar2", method = {RequestMethod.GET, RequestMethod.POST})
+public String bar2(@RequestParam(required = false) List<String> info, Account account) {
+    return "GET : " + Objects.toString(info) + ":" + Objects.toString(account);
+}
+
+@DeleteMapping(value = "/bar2")
+public String bar21(@RequestParam(required = false) List<String> info, Account account) {
+    return "DEL : " + Objects.toString(info) + ":" + Objects.toString(account);
+}
+```
+
+可以使用
+
+如果请求方法不同，两个控制器方法可以绑定到同一个请求路径上
+
+##### 请求路径映射
+
+使用注解`@RequestMapping`可为控制器类和方法设定请求路径映射
+
+当标注在类上时，设定为此控制类所有请求映射路径的前缀
+
+```java
+@Controller
+@RequestMapping("/foo")
+public class FooBarController {
+    
+    @RequestMapping("/bar")
+    @ResponseBody
+    public String bar(){
+        return "{'data':'FooBar'}";
+    }
+    
+    @RequestMapping("/baz")
+    @ResponseBody
+    public String baz(){
+        return "{'data':'FooBaz'}";
+    }
+}
+```
+
+请求
+
+```http
+GET http://localhost:8080/foo/bar
+```
+
+```http
+GET http://localhost:8080/foo/baz
+```
+
+注意`@RequestMapping("/")`与`@RequestMapping("")`的区别，在不同版本的Spring MVC中的处理方式可能不同
+
+Spring MVC支持两种路径匹配方案：
+
+- `PathPattern` 更高效的匹配方案
+- `AntPathMatcher` 原始的匹配方案
+
+其中`PathPattern`已于Spring MVC 6.0起默认使用
+
+`PathPattern`支持的匹配模式：
+
+- 单字符匹配 `?`
+
+  如`/foobar/te?t`，用于匹配除`/`等特殊字符以外的任意一个字符
+
+- 路径段多字符匹配 `*`
+
+  如`/foobar/*.html`，用于匹配除`/`等特殊字符以外的零到多个字符
+
+- 多路径段匹配 `**`
+
+  如`/foobar/**`，用于匹配包括`/`字符在内的多个字符组成的子路径，对于`/foobar/**`，包括`/foobar`、`/foobar/`、`/foobar//`等在内的畸形路径均可能匹配，但具体的特性受匹配方案、Spring MVC版本和配置等多方面影响
+
+  不可以使用如`/foobar/**/test`等形式
+
+- 路径段路径变量 `{variable}`
+
+  如
+
+  ```java
+  @RequestMapping("/foobar/{value}.do/index.html")
+  @ResponseBody
+  public String foobar(HttpServletRequest request, @PathVariable("value") String value) {
+      return request.getRequestURI() + "\n" + value;
+  }
+  ```
+
+  用于匹配单个路径段中的至少一个字符并进行解析和类型转换以赋值给变量
+
+- 路径段正则表达式匹配的路径变量 `{variable:[a-z]+}`
+
+  如`/foobar/{value:[0-9]+}.do/index.html`，用于用于匹配单个路径段中符合正则的至少一个字符并进行解析和类型转换以赋值给变量
+
+- 多路径段路径变量 `{*variable}`
+
+  如`/foobar/{*value}`，用于匹配0到多个字符组成的子路径以赋值给变量，对于`/foobar/{*value}`，包括`/foobar`、`/foobar/`、`/foobar//`等在内的畸形路径均可能匹配，且这些匹配结果的路径变量的值应为空字符串、`/`、`//`，但具体的特性受匹配方案、Spring MVC版本和配置等多方面影响
+
+  不可以使用如`/foobar/{*value}/test`等形式
+
+- Properties值注入 `${variable}`
+
+  如`/${foobar.name}.html`，用于使用外部配置文件等配置值来决定匹配的路径
+
+对于可能发生重叠的请求路径匹配模式，Spring MVC会尝试匹配更精确的模式，具体的模式比较规则由匹配方案决定，如`PathPattern`会通过分析模式的复杂度和长度来决定，如果`PathPattern`无法决定将会抛出异常，如对于请求路径`/foobar/foo/bar`和两个匹配模式`/foobar/{foo}/bar`、`/foobar/foo/{bar}`
+
+##### 请求参数/请求头匹配
+
+可以使用`@RequestMapping`的其他属性来匹配或过滤请求，与上述的请求方法和请求路径匹配相同，它们也同样可以同时作用于整个控制器类或单个控制器方法
+
+详细的使用方法可参考源码文档注释或[Spring Docs](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-requestmapping.html)
+
+- `consumes` 匹配或过滤一个或多个`Content-Type`
+
+  如`@PostMapping(path = "/foobar", consumes = {"text/plain", "application/*"})`匹配多个`Content-Type`值或`@PostMapping(path = "/foobar", consumes = "!text/plain")`匹配除`text/plain`以外的所有`Content-Type`值
+
+- `params` 匹配或过滤一个或多个参数
+
+  如`params = {"name", "!value", "code=1", "msg!=error"}`匹配包含参数`name`，不包含参数`value`，参数`code`值为`1`且参数`msg`值不为`error`的请求
+
+- `headers` 匹配或过滤一个或多个请求头
+
+  如`headers = {"Token", "!Authorization", "Content-Type=text/*", "referer!=https://www.example.com/"}`
+
+##### 动态路由注册
+
+可在配置`@Configuration`中通过`setHandlerMapping`方法以代码的形式动态地注册控制器方法
+
+
+
+
+
 ### Spring Boot 入门
 
 <u>知其然</u>
