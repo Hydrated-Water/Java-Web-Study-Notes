@@ -1275,6 +1275,54 @@ public String bar(@RequestParam("id") Integer id,
 
 通常不应该对POJO类型的方法参数声明`@RequestParam`，这是因为这会使得一个单独的请求参数的值转换到POJO对象，但这种转换通常因没有合适的转换器或规则、配置而失败
 
+可以使用不声明参数键名的`@RequestParam`标注`Map<String, String>`或`MultiValueMap<String, String> params`以用于获取全部的请求参数（查询参数和表单数据）
+
+如
+
+```java
+@RequestMapping("/foo")
+@ResponseBody
+public String foo(@RequestParam Map<String, String> params) {
+    return "";
+}
+```
+
+```java
+@RequestMapping("/foo")
+@ResponseBody
+public String foo(@RequestParam MultiValueMap<String, String> params) {
+    return "";
+}
+```
+
+其中`MultiValueMap<String, String>`本质上是`Map<String, List<String>>`，但Spring MVC默认无法处理`Map<String, List<String>>`、`Map<String, String[]`等类型
+
+`Map`和`MultiValueMap`在接收全部参数时值的类型在绝大多数情况下应为`String`
+
+###### 请求头获取
+
+使用`@RequestHeader`声明方法参数使其获取请求头，与`@RequestParam`使用方法类似，包含`value`/`name`、`required`、`defaultValue`属性，可用于标注`Map<String, String>`或`MultiValueMap<String, String> params`以获取全部请求头
+
+如
+
+```java
+@RequestMapping("/foo")
+@ResponseBody
+public String foo(
+    @RequestHeader(value = "Cookie", required = false) String cookie, 
+    @RequestHeader(value = "User-Agent", required = false) String userAgent) {
+    return "";
+}
+```
+
+```java
+@RequestMapping("/foo")
+@ResponseBody
+public String foo(@RequestHeader MultiValueMap<String, String> headers) {
+    return "";
+}
+```
+
 ###### 请求体获取
 
 使用注解`@RequestBody`声明方法参数获取请求体数据（除表单数据外）
@@ -1315,7 +1363,7 @@ public String bar(@RequestBody User user) {
 
 这里列出支持的方法参数及其注解声明，大多用于各种情况下的请求或与该请求有关的数据的获取，也可能用于响应相关
 
-| 方法参数                                                     | 描述                                                         |
+| 方法参数及注解                                               | 描述                                                         |
 | :----------------------------------------------------------- | :----------------------------------------------------------- |
 | `WebRequest`, `NativeWebRequest`                             | Generic access to request parameters and request and session attributes, without direct use of the Servlet API. |
 | `jakarta.servlet.ServletRequest`, `jakarta.servlet.ServletResponse` | Choose any specific request or response type — for example, `ServletRequest`, `HttpServletRequest`, or Spring’s `MultipartRequest`, `MultipartHttpServletRequest`. |
@@ -1333,7 +1381,7 @@ public String bar(@RequestBody User user) {
 | `@RequestHeader`                                             | 请求头                                                       |
 | `@CookieValue`                                               | 请求头Cookie                                                 |
 | `@RequestBody`                                               | 请求体                                                       |
-| `HttpEntity<B>`                                              | For access to request headers and body. The body is converted with an `HttpMessageConverter`. See [HttpEntity](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-methods/httpentity.html). |
+| `HttpEntity<B>`                                              | 请求头和请求体                                               |
 | `@RequestPart`                                               | For access to a part in a `multipart/form-data` request, converting the part’s body with an `HttpMessageConverter`. See [Multipart](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-methods/multipart-forms.html). |
 | `java.util.Map`, `org.springframework.ui.Model`, `org.springframework.ui.ModelMap` | For access to the model that is used in HTML controllers and exposed to templates as part of view rendering. |
 | `RedirectAttributes`                                         | Specify attributes to use in case of a redirect (that is, to be appended to the query string) and flash attributes to be stored temporarily until the request after redirect. See [Redirect Attributes](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-methods/redirecting-passing-data.html) and [Flash Attributes](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-methods/flash-attributes.html). |
@@ -1344,6 +1392,94 @@ public String bar(@RequestBody User user) {
 | `@SessionAttribute`                                          | For access to any session attribute, in contrast to model attributes stored in the session as a result of a class-level `@SessionAttributes` declaration. See [`@SessionAttribute`](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-methods/sessionattribute.html) for more details. |
 | `@RequestAttribute`                                          | For access to request attributes. See [`@RequestAttribute`](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-methods/requestattrib.html) for more details. |
 | 其他                                                         | If a method argument is not matched to any of the earlier values in this table and it is a simple type (as determined by [BeanUtils#isSimpleProperty](https://docs.spring.io/spring-framework/docs/6.2.7/javadoc-api/org/springframework/beans/BeanUtils.html#isSimpleProperty-java.lang.Class-)), it is resolved as a `@RequestParam`. Otherwise, it is resolved as a `@ModelAttribute`. |
+
+###### `MultipartFile`
+
+在处理`multipart/form-data`类型的包含文件部分的表单数据时，常使用`@RequestParam`和`MultipartFile`及其集合类型（即使文件部分数据总在请求体中出现）
+
+与`@RequestParam`的使用方法类似，这些集合类型包括`List<MultipartFile>`、`Map<String, MultipartFile>`、`MultiValueMap<String, MultipartFile>`
+
+这是因为`multipart/form-data`表单请求的请求体中包含多个部分，每个部分的标头通常包含`name`字段，其值即表单的键名，对于文件部分，其标头往往包含如`filename`等字段以提供更多信息，而不同部分的标头的`name`字段值可能相同
+
+因此当表单的一项值为多个文件或表单的多个文件项的键名相同时，`MultipartFile`类型的方法参数只会获取第一个文件，而`List<MultipartFile>`和`MultiValueMap<String, MultipartFile>`可以获取全部
+
+示例
+
+```java
+@RequestMapping("/foo")
+@ResponseBody
+public String foo(
+        @RequestParam(value = "comment") String comment,
+        @RequestParam(value = "file") MultipartFile file,
+        @RequestParam(value = "file2") List<MultipartFile> file2
+) {
+    return "";
+}
+```
+
+```java
+@RequestMapping("/foo")
+@ResponseBody
+public String foo(@RequestParam MultiValueMap<String, MultipartFile> params) {
+    return "";
+}
+```
+
+尝试使用`String`类型获取`MultipartFile`数据将发生异常，而`MultipartFile`类型接收文本数据时值为`null`，但这是在Spring MVC 6中的测试结果，不同版本可能特性不同
+
+因此使用`Map<String, MultipartFile>`、`MultiValueMap<String, MultipartFile>`和不声明参数名称的`@RequestParam`作为方法参数时只会仅接受全部的文件数据
+
+###### `@DateTimeFormat`
+
+可使用`@DateTimeFormat`注解获取指定格式的时间日期参数，不符合格式的参数默认情况下引发400错误
+
+如
+
+```java
+@RequestMapping("/bar")
+@ResponseBody
+public String bar(@RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date date) {
+    return Objects.toString(date);
+}
+```
+
+##### 方法返回值及其注解
+
+###### 表
+
+这里列出支持的控制器方法返回值类型及注解，通常用于响应生成
+
+其中部分注解除可标注方法外，也可标注整个控制器类，使得该注解对所有控制器方法生效，如`@ResponseBody`（但它通常被`@RestController`替代）
+
+| 方法返回值及注解                                             | 描述                                                         |
+| :----------------------------------------------------------- | :----------------------------------------------------------- |
+| `@ResponseBody`                                              | 声明返回值及响应体                                           |
+| `HttpEntity<B>`, `ResponseEntity<B>`                         | 前者为响应头和响应体，后者为完整的响应                       |
+| `HttpHeaders`                                                | 无响应体的响应                                               |
+| `ErrorResponse`                                              | To render an RFC 9457 error response with details in the body, see [Error Responses](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-ann-rest-exceptions.html) |
+| `ProblemDetail`                                              | To render an RFC 9457 error response with details in the body, see [Error Responses](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-ann-rest-exceptions.html) |
+| `String`                                                     | A view name to be resolved with `ViewResolver` implementations and used together with the implicit model — determined through command objects and `@ModelAttribute` methods. The handler method can also programmatically enrich the model by declaring a `Model` argument (see [Explicit Registrations](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-requestmapping.html#mvc-ann-requestmapping-registration)). |
+| `View`                                                       | A `View` instance to use for rendering together with the implicit model — determined through command objects and `@ModelAttribute` methods. The handler method can also programmatically enrich the model by declaring a `Model` argument (see [Explicit Registrations](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-requestmapping.html#mvc-ann-requestmapping-registration)). |
+| `java.util.Map`, `org.springframework.ui.Model`              | Attributes to be added to the implicit model, with the view name implicitly determined through a `RequestToViewNameTranslator`. |
+| `@ModelAttribute`                                            | An attribute to be added to the model, with the view name implicitly determined through a `RequestToViewNameTranslator`.Note that `@ModelAttribute` is optional. See "Any other return value" at the end of this table. |
+| `ModelAndView` object                                        | The view and model attributes to use and, optionally, a response status. |
+| `FragmentsRendering`, `Collection<ModelAndView>`             | For rendering one or more fragments each with its own view and model. See [HTML Fragments](https://docs.spring.io/spring-framework/reference/web/webmvc-view/mvc-fragments.html) for more details. |
+| `void`                                                       | A method with a `void` return type (or `null` return value) is considered to have fully handled the response if it also has a `ServletResponse`, an `OutputStream` argument, or an `@ResponseStatus` annotation. The same is also true if the controller has made a positive `ETag` or `lastModified` timestamp check (see [Controllers](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-caching.html#mvc-caching-etag-lastmodified) for details).If none of the above is true, a `void` return type can also indicate “no response body” for REST controllers or a default view name selection for HTML controllers. |
+| `DeferredResult<V>`                                          | Produce any of the preceding return values asynchronously from any thread — for example, as a result of some event or callback. See [Asynchronous Requests](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-ann-async.html) and [`DeferredResult`](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-ann-async.html#mvc-ann-async-deferredresult). |
+| `Callable<V>`                                                | Produce any of the above return values asynchronously in a Spring MVC-managed thread. See [Asynchronous Requests](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-ann-async.html) and [`Callable`](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-ann-async.html#mvc-ann-async-callable). |
+| `ListenableFuture<V>`, `java.util.concurrent.CompletionStage<V>`, `java.util.concurrent.CompletableFuture<V>` | Alternative to `DeferredResult`, as a convenience (for example, when an underlying service returns one of those). |
+| `ResponseBodyEmitter`, `SseEmitter`                          | Emit a stream of objects asynchronously to be written to the response with `HttpMessageConverter` implementations. Also supported as the body of a `ResponseEntity`. See [Asynchronous Requests](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-ann-async.html) and [HTTP Streaming](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-ann-async.html#mvc-ann-async-http-streaming). |
+| `StreamingResponseBody`                                      | Write to the response `OutputStream` asynchronously. Also supported as the body of a `ResponseEntity`. See [Asynchronous Requests](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-ann-async.html) and [HTTP Streaming](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-ann-async.html#mvc-ann-async-http-streaming). |
+| Reactor and other reactive types registered via `ReactiveAdapterRegistry` | A single value type, for example, `Mono`, is comparable to returning `DeferredResult`. A multi-value type, for example, `Flux`, may be treated as a stream depending on the requested media type, for example, "text/event-stream", "application/json+stream", or otherwise is collected to a List and rendered as a single value. See [Asynchronous Requests](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-ann-async.html) and [Reactive Types](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-ann-async.html#mvc-ann-async-reactive-types). |
+| 其他                                                         | If a return value remains unresolved in any other way, it is treated as a model attribute, unless it is a simple type as determined by [BeanUtils#isSimpleProperty](https://docs.spring.io/spring-framework/docs/6.2.7/javadoc-api/org/springframework/beans/BeanUtils.html#isSimpleProperty-java.lang.Class-), in which case it remains unresolved. |
+
+
+
+#### 模型与视图
+
+模型和视图技术常用于
+
+==TODO 不完善的章节==
 
 
 
