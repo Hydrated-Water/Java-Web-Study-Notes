@@ -1056,6 +1056,8 @@ public String bar21(@RequestParam(required = false) List<String> info, Account a
 
 ##### 请求路径映射
 
+###### 基础
+
 使用注解`@RequestMapping`可为控制器类和方法设定请求路径映射
 
 当标注在类上时，设定为此控制类所有请求映射路径的前缀
@@ -1090,6 +1092,10 @@ GET http://localhost:8080/foo/baz
 ```
 
 注意`@RequestMapping("/")`与`@RequestMapping("")`的区别，在不同版本的Spring MVC中的处理方式可能不同
+
+###### 模式
+
+模式是通过`@RequestMapping`等方式对控制器方法或类声明的进行请求路径匹配的规则
 
 Spring MVC支持两种路径匹配方案：
 
@@ -1154,7 +1160,7 @@ Spring MVC支持两种路径匹配方案：
 
   如`@PostMapping(path = "/foobar", consumes = {"text/plain", "application/*"})`匹配多个`Content-Type`值或`@PostMapping(path = "/foobar", consumes = "!text/plain")`匹配除`text/plain`以外的所有`Content-Type`值
 
-- `params` 匹配或过滤一个或多个参数
+- `params` 匹配或过滤一个或多个查询参数
 
   如`params = {"name", "!value", "code=1", "msg!=error"}`匹配包含参数`name`，不包含参数`value`，参数`code`值为`1`且参数`msg`值不为`error`的请求
 
@@ -1165,6 +1171,179 @@ Spring MVC支持两种路径匹配方案：
 ##### 动态路由注册
 
 可在配置`@Configuration`中通过`setHandlerMapping`方法以代码的形式动态地注册控制器方法
+
+
+
+#### 请求与响应
+
+##### 概述
+
+在控制器方法中常常需要处理请求的方式、路径、参数、标头和请求体等数据，并返回一定的数据
+
+虽然路由可以匹配请求方式、路径等，但大多数动态的数据需要通过某种方式声明控制器方法参数来主动获取
+
+响应可通过设置某些类型的控制器方法参数的值，或返回某些类型的值来直接或间接的产生
+
+##### 请求数据基础
+
+通过简单地或带注释地声明控制器方法的参数来获取请求参数和请求体数据
+
+请求参数常指URL中的查询参数和表单（`application/x-www-form-urlencoded`和`multipart/form-data`）数据
+
+请求中的对应数据在转换成方法参数时遵循一定的规则和配置，简单来说就是有一批转换器类用于执行字符串与特定类型（原始类型、包装类型、集合、POJO类型等）之间的数据类型转换，详情见下文数据转换
+
+由于原始类型不能为`null`，在请求中无对应数据时更容易触发更多类型转换时的异常，通常不建议使用原始类型方法参数或包含原始类型的类型的方法参数来接收请求数据
+
+POJO类在Spring中的要求并不严格，它可以包含一些其他的方法等内容，且POJO类可以嵌套，但是其主要的属性必须包含Getter和Setter方法，这里所谓主要的属性指那些用于接受输入或提供输出数据的属性，即参与了序列化和反序列化的属性。一般的，推荐使用`lombok`简化POJO声明
+
+###### 简单方法参数
+
+直接声明方法参数用于获取请求参数（查询参数和表单数据）
+
+如
+
+```java
+@RequestMapping("/foobar")
+@ResponseBody
+public String foobar(Integer id, String name) {
+    return id + ":" + name;
+}
+```
+
+使用POJO类型参数获取请求参数，如上述代码等效于
+
+```java
+@Data
+public class User {
+    private String name;
+    private Integer id;
+}
+```
+
+```java
+@RequestMapping("/foobar")
+@ResponseBody
+public String foobar(User user) {
+    return user.getId() + ":" + user.getName();
+}
+```
+
+可使用嵌套的POJO类型参数，如
+
+```java
+@Data
+public class Account {
+    private User user;
+    private String uuid;
+}
+```
+
+```java
+@RequestMapping("/bar")
+@ResponseBody
+public String bar(Account account) {
+    return Objects.toString(account);
+}
+```
+
+使用`.`符号索引被嵌套的POJO类型的属性，如对上述代码的查询参数如下
+
+```
+?user.id=1&user.name=李华&uuid=114514
+```
+
+###### 请求参数获取
+
+使用`@RequestParam`显式声明此方法参数获取请求参数（查询参数和表单数据）
+
+如
+
+```java
+@RequestMapping("/bar")
+@ResponseBody
+public String bar(@RequestParam("id") Integer id,
+                   @RequestParam(value = "username", required = false) String name) {
+    return id + ":" + name;
+}
+```
+
+`@RequestParam`的常用属性
+
+- `value` / `name` 请求参数键名，默认为方法参数名
+- `required` 是否必须（非`null`值），默认为`true`，但即使为`true`也不可避免空字符串、空数组等异常数据
+- `defaultValue` 请求参数默认值，默认为`null`
+
+通常不应该对POJO类型的方法参数声明`@RequestParam`，这是因为这会使得一个单独的请求参数的值转换到POJO对象，但这种转换通常因没有合适的转换器或规则、配置而失败
+
+###### 请求体获取
+
+使用注解`@RequestBody`声明方法参数获取请求体数据（除表单数据外）
+
+如获取`application/json`类型的请求体数据并转换为嵌套的POJO对象
+
+```java
+@Data
+public class User {
+    private Long id;
+    private String name;
+    private Permission[] permissions;
+}
+```
+
+```java
+@RequestMapping("/bar")
+@ResponseBody
+public String bar(@RequestBody User user) {
+    return Objects.toString(user);
+}
+```
+
+##### 数据转换
+
+==TODO 不完善的章节==
+
+常见特殊数据转换规则
+
+1. 请求参数中重复的键，如`?name=李华&name=川建国`转换为字符串形式时通常以`,`符号为分隔，如：`"李华,川建国"`
+2. 请求参数中以`,`符号分割的值可以转换为数组或列表，如`?name=李华,川建国`
+
+##### 方法参数及其注解
+
+==TODO 不完善的章节==
+
+###### 表
+
+这里列出支持的方法参数及其注解声明，大多用于各种情况下的请求或与该请求有关的数据的获取，也可能用于响应相关
+
+| 方法参数                                                     | 描述                                                         |
+| :----------------------------------------------------------- | :----------------------------------------------------------- |
+| `WebRequest`, `NativeWebRequest`                             | Generic access to request parameters and request and session attributes, without direct use of the Servlet API. |
+| `jakarta.servlet.ServletRequest`, `jakarta.servlet.ServletResponse` | Choose any specific request or response type — for example, `ServletRequest`, `HttpServletRequest`, or Spring’s `MultipartRequest`, `MultipartHttpServletRequest`. |
+| `jakarta.servlet.http.HttpSession`                           | Enforces the presence of a session. As a consequence, such an argument is never `null`. Note that session access is not thread-safe. Consider setting the `RequestMappingHandlerAdapter` instance’s `synchronizeOnSession` flag to `true` if multiple requests are allowed to concurrently access a session. |
+| `jakarta.servlet.http.PushBuilder`                           | Servlet 4.0 push builder API for programmatic HTTP/2 resource pushes. Note that, per the Servlet specification, the injected `PushBuilder` instance can be null if the client does not support that HTTP/2 feature. |
+| `java.security.Principal`                                    | Currently authenticated user — possibly a specific `Principal` implementation class if known.Note that this argument is not resolved eagerly, if it is annotated in order to allow a custom resolver to resolve it before falling back on default resolution via `HttpServletRequest#getUserPrincipal`. For example, the Spring Security `Authentication` implements `Principal` and would be injected as such via `HttpServletRequest#getUserPrincipal`, unless it is also annotated with `@AuthenticationPrincipal` in which case it is resolved by a custom Spring Security resolver through `Authentication#getPrincipal`. |
+| `HttpMethod`                                                 | 请求的HTTP方法                                               |
+| `java.util.Locale`                                           | The current request locale, determined by the most specific `LocaleResolver` available (in effect, the configured `LocaleResolver` or `LocaleContextResolver`). |
+| `java.util.TimeZone` + `java.time.ZoneId`                    | The time zone associated with the current request, as determined by a `LocaleContextResolver`. |
+| `java.io.InputStream`, `java.io.Reader`                      | For access to the raw request body as exposed by the Servlet API. |
+| `java.io.OutputStream`, `java.io.Writer`                     | For access to the raw response body as exposed by the Servlet API. |
+| `@PathVariable`                                              | URL路径参数，参见请求路径映射                                |
+| `@MatrixVariable`                                            | URI矩阵参数                                                  |
+| `@RequestParam`                                              | 请求参数，包括查询参数和表单数据                             |
+| `@RequestHeader`                                             | 请求头                                                       |
+| `@CookieValue`                                               | 请求头Cookie                                                 |
+| `@RequestBody`                                               | 请求体                                                       |
+| `HttpEntity<B>`                                              | For access to request headers and body. The body is converted with an `HttpMessageConverter`. See [HttpEntity](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-methods/httpentity.html). |
+| `@RequestPart`                                               | For access to a part in a `multipart/form-data` request, converting the part’s body with an `HttpMessageConverter`. See [Multipart](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-methods/multipart-forms.html). |
+| `java.util.Map`, `org.springframework.ui.Model`, `org.springframework.ui.ModelMap` | For access to the model that is used in HTML controllers and exposed to templates as part of view rendering. |
+| `RedirectAttributes`                                         | Specify attributes to use in case of a redirect (that is, to be appended to the query string) and flash attributes to be stored temporarily until the request after redirect. See [Redirect Attributes](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-methods/redirecting-passing-data.html) and [Flash Attributes](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-methods/flash-attributes.html). |
+| `@ModelAttribute`                                            | For access to an existing attribute in the model (instantiated if not present) with data binding and validation applied. See [`@ModelAttribute`](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-methods/modelattrib-method-args.html) as well as [Model](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-modelattrib-methods.html) and [`DataBinder`](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-initbinder.html).Note that use of `@ModelAttribute` is optional (for example, to set its attributes). See “Any other argument” at the end of this table. |
+| `Errors`, `BindingResult`                                    | For access to errors from validation and data binding for a command object (that is, a `@ModelAttribute` argument) or errors from the validation of a `@RequestBody` or `@RequestPart` arguments. You must declare an `Errors`, or `BindingResult` argument immediately after the validated method argument. |
+| `SessionStatus` + class-level `@SessionAttributes`           | For marking form processing complete, which triggers cleanup of session attributes declared through a class-level `@SessionAttributes` annotation. See [`@SessionAttributes`](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-methods/sessionattributes.html) for more details. |
+| `UriComponentsBuilder`                                       | For preparing a URL relative to the current request’s host, port, scheme, context path, and the literal part of the servlet mapping. See [URI Links](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-uri-building.html). |
+| `@SessionAttribute`                                          | For access to any session attribute, in contrast to model attributes stored in the session as a result of a class-level `@SessionAttributes` declaration. See [`@SessionAttribute`](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-methods/sessionattribute.html) for more details. |
+| `@RequestAttribute`                                          | For access to request attributes. See [`@RequestAttribute`](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-methods/requestattrib.html) for more details. |
+| 其他                                                         | If a method argument is not matched to any of the earlier values in this table and it is a simple type (as determined by [BeanUtils#isSimpleProperty](https://docs.spring.io/spring-framework/docs/6.2.7/javadoc-api/org/springframework/beans/BeanUtils.html#isSimpleProperty-java.lang.Class-)), it is resolved as a `@RequestParam`. Otherwise, it is resolved as a `@ModelAttribute`. |
 
 
 
