@@ -24,16 +24,22 @@
     - Java SE
     - Java EE
   - 工具链
+    - Lombok
     - Maven
     - Tomcat
     - Linux
     - Docker
   - Spring 基础
+    - Spring MVC 入门
+    - Spring Boot 入门
+    - Spring Boot 进阶
   - 数据库
     - MySQL
     - MyBatis
     - MyBatis-Plus
     - Redis
+  - 工具类库
+    - Lombok
 
 
 
@@ -259,6 +265,14 @@ connection.close(); // 实质上归还了连接而不是立即关闭连接
 
 
 ## 工具链
+
+
+
+
+
+### Lombok
+
+==TODO 空的章节==
 
 
 
@@ -1659,3 +1673,398 @@ myapp.jar
 
 - 被嵌套的内层`jar`文件不能被再次压缩，而是“仅存储”（外层`jar`文件中的其他内容和内层`jar`文件中的内容可以被正常压缩），否则`NestedJarFile`将无法定位内层`jar`文件中的类文件
 - 被嵌套的内层`jar`文件中的类不能正常使用`ClassLoader.getSystemClassLoader()`，它应该使用`Thread.getContextClassLoader()`，因此依赖系统类加载器的功能将无法使用，如 `java.util.Logging`
+
+
+
+
+
+
+
+## 数据库
+
+
+
+
+
+### MyBatis 入门
+
+
+
+#### 概述
+
+MyBatis是一款持久层框架，用于简化JDBC的开发，其通过XML或注解来配置数据库中记录到POJO对象的映射
+
+MyBatis的前身是Apache开源项目iBatis，现在托管于Github
+
+
+
+#### Hello World
+
+准备Spring Boot开发环境及项目、MySQL数据库及表和记录
+
+引入MyBatis依赖和MySQL驱动依赖，如
+
+```xml
+<dependency>
+    <groupId>org.mybatis.spring.boot</groupId>
+    <artifactId>mybatis-spring-boot-starter</artifactId>
+    <version>3.0.4</version>
+</dependency>
+
+<dependency>
+    <groupId>org.mybatis.spring.boot</groupId>
+    <artifactId>mybatis-spring-boot-starter-test</artifactId>
+    <version>3.0.4</version>
+    <scope>test</scope>
+</dependency>
+
+
+<dependency>
+    <groupId>com.mysql</groupId>
+    <artifactId>mysql-connector-j</artifactId>
+    <scope>runtime</scope>
+</dependency>
+```
+
+在`application.properties`中配置数据源，如
+
+```properties
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+spring.datasource.url=jdbc:mysql://localhost:3306/world
+spring.datasource.username=root
+spring.datasource.password=password
+```
+
+按照表结构声明对应的POJO类，如
+
+```java
+package com.crim.web.lab.springmvclab.web.entity;
+
+import lombok.Data;
+
+
+/**
+ * CREATE TABLE `city` (
+ * `ID` int NOT NULL AUTO_INCREMENT,
+ * `Name` char(35) NOT NULL DEFAULT '',
+ * `CountryCode` char(3) NOT NULL DEFAULT '',
+ * `District` char(20) NOT NULL DEFAULT '',
+ * `Population` int NOT NULL DEFAULT '0',
+ * PRIMARY KEY (`ID`),
+ * KEY `CountryCode` (`CountryCode`),
+ * CONSTRAINT `city_ibfk_1` FOREIGN KEY (`CountryCode`) REFERENCES `country` (`Code`)
+ * ) ENGINE=InnoDB AUTO_INCREMENT=4080 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+ */
+@Data
+public class City {
+    
+    private Integer id;
+    
+    private String name;
+    
+    private String countryCode;
+    
+    private String district;
+    
+    private Integer population;
+    
+}
+```
+
+声明Mapper接口，如
+
+```java
+package com.crim.web.lab.springmvclab.web.mapper;
+
+import com.crim.web.lab.springmvclab.web.entity.City;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Select;
+
+import java.util.List;
+
+
+@Mapper
+public interface CityMapper {
+    
+    @Select("select * from city")
+    List<City> getAllCities();
+    
+}
+```
+
+进行测试，如
+
+```java
+@Autowired
+CityMapper cityMapper;
+
+@Test
+void test() {
+    System.out.println(cityMapper.getAllCities());
+}
+```
+
+
+
+#### 基于注解
+
+##### 基础
+
+MyBatis支持通过在Mapper方法上声明注解的方式实现方法与SQL语句之间的映射
+
+示例
+
+```java
+@Select("select name from city where id = #{id}")
+String getCityNameById(Integer id);
+```
+
+##### 条件参数
+
+可以使用`#{param}`或`${param}`的形式将需要注入的变量按名称绑定到参数中
+
+其中前者使用预编译的占位符，而后者为直接的字符串拼接
+
+被绑定的参数可以是直接声明的方法参数、方法参数POJO类型中声明的属性或`Map`中存储的键值对
+
+示例
+
+```java
+@Select("select CountryCode from city where ID=#{id} and Name=#{name}")
+String getCountryCodeByIdAndName(Integer id, String name);
+```
+
+```java
+@Select("select CountryCode from city where ID=#{id} and Name=#{name}")
+String getCountryCodeByIdAndName2(City city);
+```
+
+```java
+@Select("select CountryCode from city where ID=#{id} and Name=#{name}")
+String getCountryCodeByIdAndName3(Map<String, Object> params);
+```
+
+`${param}`用于无法使用预编译的情况，如`like`字符串模糊匹配、表名、字段名等
+
+示例
+
+```java
+// 由于存在SQLi，常用concat('%',#{string},'%')的形式替代
+@Select("select CountryCode from city where Name like '%${string}%'")
+```
+
+##### 结果映射
+
+可以通过声明方法返回值类型的方式将查询结果集映射到单个值、POJO对象、键值对、POJO的列表、键值对的列表等
+
+示例
+
+```java
+@Select("select name from city where id = #{id}")
+String getCityNameById(Integer id);
+```
+
+```java
+@Select("select name, countrycode from city where id = #{id}")
+City getCityById(Integer id);
+```
+
+```java
+@Select("select name, countrycode from city where id = #{id}")
+Map<String, Object> getCityById2(Integer id);
+```
+
+```java
+@Select("select * from city")
+List<City> getAllCities();
+```
+
+```
+@Select("select * from city")
+List<Map<String, Object>> getAllCities2();
+```
+
+INSERT、DELETE和UPDATE语句的结果也可以映射至整型或长整型、布尔型（及其包装类型）返回值
+
+示例
+
+```java
+@Update("update user set phone_number=#{phoneNumber} where id=#{id}")
+int updatePhoneNumber(User user);
+```
+
+```java
+@Update("update user set phone_number=#{phoneNumber} where name=#{name}")
+boolean updatePhoneNumber(String name, String phoneNumber);
+```
+
+INSERT语句如果使用了数据库自增ID，可以通过声明`@Options`注解的`useGeneratedKeys`为`true`以及`keyProperty`为方法参数名或POJO类型属性名的方式进行主键返回，如果有多个ID，则使用`,`符号分隔
+
+示例
+
+```java
+@Options(useGeneratedKeys = true, keyProperty = "id")
+@Insert("insert into user(name,phone_number) values(#{name},#{phoneNumber})")
+int insertUser2(User user);
+```
+
+##### 列名映射
+
+在SELECT语句中，如果需要将结果集映射到POJO对象时，可能会出现表列名与POJO属性名不符的情况
+
+如
+
+```java
+@Data
+public class User {
+    private Integer id;
+    private String name;
+    private String phoneNumber;
+}
+```
+
+```mysql
+CREATE TABLE `user` (
+    `id` int NOT NULL AUTO_INCREMENT,
+    `name` char(16) NOT NULL,
+    `phone_number` char(16) DEFAULT NULL,
+    PRIMARY KEY (`id`)
+)
+```
+
+在进行查询时，未被匹配的列数据将被忽略，使得`User.phoneNumber`字段值总为`null`
+
+###### 别名
+
+通过SQL语句的别名功能进行手动映射
+
+示例
+
+```java
+@Select("select id, name, phone_number as phoneNumber from user")
+List<User> getAllUsers();
+```
+
+###### `@Results`
+
+通过`@Results`注解进行手动映射
+
+示例
+
+```java
+@Results({
+    @Result(property = "phoneNumber", column = "phone_number")
+})
+@Select("select id, name, phone_number from user")
+List<User> getAllUsers();
+```
+
+###### 下划线-驼峰命名自动转换
+
+通过在`application.properties`中配置开启MyBatis下划线命名与驼峰命名自动转换功能
+
+```properties
+mybatis.configuration.map-underscore-to-camel-case=true
+```
+
+
+
+#### 基于XML映射
+
+
+
+#### 配置
+
+##### 日志
+
+在`application.properties`配置MyBatis日志输出以在日志中查看SQL的执行和结果，如
+
+```properties
+# 使com包下的日志输出级别为debug
+logging.level.com=debug
+# 使用Spring Boot的SLF4J作为日志输出
+mybatis.configuration.log-impl=org.apache.ibatis.logging.slf4j.Slf4jImpl
+```
+
+通常info级别不会输出SQL语句，debug级别将输出SQL语句及查询结果，trace级别将输出查询结果集
+
+##### IDEA
+
+通过配置IDEA使其更适合基于MyBatis开发
+
+- 配置SQL方言
+
+  用于SQL语法自动检测和语法提示
+
+- 配置数据源
+
+  用于SQL中的表、字段等的自动检测和语法提示
+
+- 安装MyBatisX插件
+
+  用于MyBatis自动检测、语法提示和快捷跳转
+
+##### 连接池
+
+通过配置连接池可以使持久层进行性能优化或支持更多的功能
+
+- 无配置
+
+  Spring Boot 默认使用Hikari连接池
+
+- 配置Druid连接池
+
+  Druid内容参见Druid章节或[官方文档](https://github.com/alibaba/druid)
+
+  引入boot starter依赖，对于Spring Boot 2 如下
+
+  ```xml
+  <dependency>
+      <groupId>com.alibaba</groupId>
+      <artifactId>druid-spring-boot-starter</artifactId>
+      <version>1.2.24</version>
+  </dependency>
+  ```
+
+  对于Spring Boot 3 如下
+
+  ```xml
+  <dependency>
+      <groupId>com.alibaba</groupId>
+      <artifactId>druid-spring-boot-3-starter</artifactId>
+      <version>1.2.24</version>
+  </dependency>
+  ```
+
+  在`application.properties`中配置数据源
+
+  ```properties
+  spring.datasource.druid.url= 
+  # 或spring.datasource.url= 
+  
+  spring.datasource.druid.username= 
+  # 或spring.datasource.username=
+  
+  spring.datasource.druid.password= 
+  # 或spring.datasource.password=
+  
+  spring.datasource.druid.driver-class-name= 
+  #或 spring.datasource.driver-class-name=
+  ```
+
+
+
+
+
+
+
+## 工具类库
+
+
+
+
+
+### BeanUtils
+
+==TODO 空的章节==
+
