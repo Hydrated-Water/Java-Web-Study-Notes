@@ -1808,7 +1808,7 @@ void test() {
 
 #### 基于注解
 
-##### 基础
+##### 概述
 
 MyBatis支持通过在Mapper方法上声明注解的方式实现方法与SQL语句之间的映射
 
@@ -1819,7 +1819,7 @@ MyBatis支持通过在Mapper方法上声明注解的方式实现方法与SQL语�
 String getCityNameById(Integer id);
 ```
 
-##### 条件参数
+##### 参数映射
 
 可以使用`#{param}`或`${param}`的形式将需要注入的变量按名称绑定到参数中
 
@@ -1898,7 +1898,7 @@ int updatePhoneNumber(User user);
 boolean updatePhoneNumber(String name, String phoneNumber);
 ```
 
-INSERT语句如果使用了数据库自增ID，可以通过声明`@Options`注解的`useGeneratedKeys`为`true`以及`keyProperty`为方法参数名或POJO类型属性名的方式进行主键返回，如果有多个ID，则使用`,`符号分隔
+INSERT语句如果使用了数据库自动生成主键，可以通过声明`@Options`注解的`useGeneratedKeys`为`true`以及`keyProperty`为POJO类型属性名的方式进行主键返回，如果有多个ID，则使用`,`符号分隔，当表的主键不是第一个字段或不止一个字段时，应声明`keycolumn`属性
 
 示例
 
@@ -1970,6 +1970,275 @@ mybatis.configuration.map-underscore-to-camel-case=true
 
 
 #### 基于XML映射
+
+##### 概述
+
+MyBatis支持在XML文件中声明Mapper类及其方法与SQL语句之间的映射，因此这些XML文件也被成为“XML映射文件”
+
+在默认配置下，XML映射文件的声明应至少遵循如下规范，否则映射可能失败
+
+- XML文件应与所对应的Mapper源码Java文件同包同名
+
+  对于Maven项目，`java`文件夹中的Mapper源码Java文件所在的包应与`resources`文件夹中对应XML映射文件所在的包相同
+
+- XML映射文件包含应包含的头为
+
+  ```xml
+  <?xml version="1.0" encoding="UTF-8" ?>
+  <!DOCTYPE mapper
+          PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+          "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  ```
+
+- XML映射文件的`mapper`根元素应包含`namespace`属性，其值应为所对应的Mapper类的全限定名
+
+- 每个`select`、`update`、`insert`、`delete`标签的`id`属性的值应为所对应的Mapper类方法名，`resultType`应为对应Mapper类方法返回值中一条记录的类型，当返回值为集合时，`resultType`应当是集合的类型而不是集合，具体的声明方式参见下文
+
+示例：
+
+`src/main/java/com/example/mapper/UserMapper.java`
+
+```java
+package com.example.mapper;
+
+import com.example.entity.User;
+import org.apache.ibatis.annotations.Mapper;
+
+import java.util.List;
+
+
+@Mapper
+public interface UserMapper {
+    
+    List<User> getUsers();
+    
+}
+
+```
+
+`src/main/resources/com/example/mapper/UserMapper.xml`
+
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.mapper.UserMapper">
+
+    <select id="getUsers" resultType="com.example.entity.User">
+        select * from user
+    </select>
+
+</mapper>
+```
+
+##### 元素及其属性一览
+
+在`mapper`中可声明的顶级元素如下：
+
+- `cache` – 该命名空间的缓存配置
+- `cache-ref` – 引用其它命名空间的缓存配置
+- `resultMap` – 描述如何从数据库结果集中加载对象
+- ~~`parameterMap` – 老式风格的参数映射。此元素已被废弃，并可能在将来被移除！请使用行内参数映射~~
+- `sql` – 可被其它语句引用的可重用语句块
+- `insert` – 映射插入语句
+- `update` – 映射更新语句
+- `delete` – 映射删除语句
+- `select` – 映射查询语句
+
+`select`元素中可声明的属性如下：
+
+- `id`
+- `parameterType`
+- ~~`parameterMap`~~
+- `resultType`
+- `resultMap`
+- `flushCache`
+- `useCache`
+- `timeout`
+- `fetchSize`
+- `statementType`
+- `resultSetType`
+- `databaseId`
+- `resultOrdered`
+- `resultSets`
+- `affectData`
+
+`insert`和`update`元素中可声明的属性如下：
+
+- `id`
+- `parameterType`
+- ~~`parameterMap`~~
+- `flushCache`
+- `timeout`
+- `statementType`
+- `useGeneratedKeys`
+- `keyProperty`
+- `keyColumn`
+- `databaseId`
+
+`delete`元素中可声明的属性如下：
+
+- `id`
+- `parameterType`
+- ~~`parameterMap`~~
+- `flushCache`
+- `timeout`
+- `statementType`
+- `databaseId`
+
+##### 参数映射
+
+可以使用`#{param}`或`${param}`的形式将需要注入的变量按名称绑定到参数中
+
+其中前者使用预编译的占位符，而后者为直接的字符串拼接
+
+被绑定的参数可以是直接声明的方法参数、方法参数POJO类型中声明的属性或`Map`中存储的键值对
+
+可以使用`parameterType`属性显式声明参数类型，无特殊情况时也可忽略该属性
+
+示例
+
+```java
+int selectCountByName(String name);
+    
+int selectCountByNameAndPhoneNumber(User user);
+    
+int selectCountByNameOrPhoneNumber(Map<String, Object> params);
+```
+
+```xml
+<select id="selectCountByName" parameterType="string" resultType="int">
+    select count(*) from user where name=#{name}
+</select>
+
+<select id="selectCountByNameAndPhoneNumber" parameterType="com.crim.web.lab.springmvclab.web.entity.User" resultType="Integer">
+    select count(*) from user where name=#{name} and phone_number=#{phoneNumber}
+</select>
+
+<select id="selectCountByNameOrPhoneNumber" parameterType="map" resultType="Integer">
+    select count(*) from user where name=#{name} or phone_number=#{phoneNumber}
+</select>
+```
+
+或
+
+```xml
+<select id="selectCountByName" resultType="int">
+    select count(*) from user where name=#{name}
+</select>
+
+<select id="selectCountByNameAndPhoneNumber" resultType="Integer">
+    select count(*) from user where name=#{name} and phone_number=#{phoneNumber}
+</select>
+
+<select id="selectCountByNameOrPhoneNumber" resultType="Integer">
+    select count(*) from user where name=#{name} or phone_number=#{phoneNumber}
+</select>
+```
+
+##### 结果映射
+
+可在`select`元素声明`resultType`将结果映射到指定类型
+
+结果可以映射到单个值、POJO对象、键值对、POJO的列表、键值对的列表等
+
+但当结果集是多个记录时，`resultType`仅需声明单个记录的类型，且无需泛型声明
+
+示例
+
+```java
+String getUserNameById(Integer id);
+    
+User getUserById(Integer id);
+    
+List<User> getUsers();
+    
+Map<String, Object> getUserMapById(Integer id);
+    
+List<Map<String, Object>> getUsersMap();
+```
+
+```xml
+<select id="getUserNameById" resultType="String">
+	select name from user where id=#{id}
+</select>
+
+<select id="getUserById" resultType="com.crim.web.lab.springmvclab.web.entity.User">
+	select * from user where id=#{id}
+</select>
+
+<select id="getUsers" resultType="com.crim.web.lab.springmvclab.web.entity.User">
+	select * from user
+</select>
+
+<select id="getUserMapById" resultType="Map">
+	select * from user where id=#{id}
+</select>
+
+<select id="getUsersMap" resultType="Map">
+	select * from user
+</select>
+```
+
+无特殊情况时`resultType`可省略，MyBatis会自动从Mapper方法中获取返回值类型
+
+示例
+
+```xml
+<select id="getUserNameById">
+	select name from user where id=#{id}
+</select>
+
+<select id="getUserById">
+	select * from user where id=#{id}
+</select>
+
+<select id="getUsers">
+	select * from user
+</select>
+
+<select id="getUserMapById">
+	select * from user where id=#{id}
+</select>
+
+<select id="getUsersMap">
+	select * from user
+</select>
+```
+
+元素`update`、`delete`、`insert`不能声明`resultType`属性，但在Mapper方法中可以声明返回值为整型或长整型、布尔型（及其包装类型）
+
+示例
+
+```java
+Long updatePhoneNumber(Integer id, String phoneNumber);
+boolean updatePhoneNumber2(Integer id, String phoneNumber);
+```
+
+```xml
+<update id="updatePhoneNumber">
+    update user set phone_number=#{phoneNumber} where id=#{id}
+</update>
+
+<update id="updatePhoneNumber2">
+    update user set phone_number=#{phoneNumber} where id=#{id}
+</update>
+```
+
+INSERT语句如果使用了数据库自动生成主键，可以通过声明`insert`元素的`useGeneratedKeys`属性值为`true`以及`keyProperty`为POJO类型属性名的方式进行主键返回，如果有多个ID，则使用`,`符号分隔，当表的主键不是第一个字段或不止一个字段时，应声明`keycolumn`属性
+
+示例
+
+```java
+int insertUser(User user);
+```
+
+```xml
+<insert id="insertUser" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+    insert into user(name,phone_number) values(#{name},#{phoneNumber})
+</insert>
+```
 
 
 
