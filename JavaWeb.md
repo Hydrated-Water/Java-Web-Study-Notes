@@ -2075,6 +2075,8 @@ MyBatis支持在XML文件中声明Mapper类及其方法与SQL语句之间的映�
 
 - 每个`select`、`update`、`insert`、`delete`标签的`id`属性的值应为所对应的Mapper类方法名，`resultType`应为对应Mapper类方法返回值中一条记录的类型，当返回值为集合时，`resultType`应当是集合的类型而不是集合，具体的声明方式参见下文
 
+- Mapper中的每一个方法都应该存在映射（即使不在XML映射文件中），但XML映射文件中可以存在冗余的声明
+
 示例：
 
 `src/main/java/com/example/mapper/UserMapper.java`
@@ -2387,7 +2389,7 @@ User getUserById(Integer id);
 
 可以将同一个结果集列多次映射到不同的POJO属性或Map键
 
-`id`和`result`的属性共用，它们的区别在于`id`用于在缓存或连接映射中作为对象的标识符以优化性能
+`id`和`result`的属性共用，它们的区别在于`id`用于在缓存或关联映射中作为对象的标识符以优化性能
 
 可声明的属性如下：
 
@@ -2476,6 +2478,24 @@ public class Country {
 ```
 
 ```java
+@Data
+public class CountryLanguage {
+    /// 表字段
+    // Key 1
+    private String countryCode;
+    // Key 2
+    private String language;
+    private String isOfficial;    
+    private Double percentage;
+    /// 关联字段
+    // CountryCode关联国家
+    private Country country;
+    // 所有使用了该语言的国家
+    private Country[] countries;
+}
+```
+
+```java
 @Mapper
 public interface ExampleMapper {
     City getCityById(Integer id);
@@ -2483,19 +2503,166 @@ public interface ExampleMapper {
 }
 ```
 
+##### 关联映射
+
+如果需要将连接查询（或可视为连接查询的查询功能）结果集映射到嵌套的POJO或Map中，在代码实现上较为繁琐，不过MyBatis提供了关联映射用于解决这一问题
+
+MyBatis的关联映射通过`resultMap`的子元素`association`和`collection`实现
+
+其中`association`用于解决一对一映射问题，典型情景是将连接查询的结果集映射到一个或多个包含POJO类型属性的嵌套POJO对象中，如上文的`City`类和`City.country`属性
+
+而`collection`用于解决一对多问题，典型情景是连接查询的结果集映射到包含POJO的集合属性的一个或多个POJO对象中，如上文的`CountryLanguage`类和`CountryLanguage.countries`属性
+
+`association`有两种工作模式，基于嵌套查询和
+
+==TODO==
+
 ##### 基于嵌套查询关联映射
+
+基于嵌套查询的关联映射的核心思想是通过声明`select`语句之间的关系，使得不同`select`语句分别执行，它们查询结果集按照一对一的关系进行关联映射
+
+基于嵌套查询的`association` 额外声明的属性：
+
+- `column` 作为参数传递给目标`select`的结果集列名，如果目标`select`需要多个参数，应使用如`{param1=column1,param2=column2}`的格式
+- `select` 目标`select`元素的`id`
+- `fetchType` 可选的属性，值为`lazy`懒加载或`eager`急加载，详情参见工作原理及优化
+
+基于嵌套查询的关联映射的工作模式类似于SQL中的左连接，如果目标`select`查询结果集为空集，那么最终Mapper方法返回值中关联属性的值为null
 
 ###### 基础
 
+以下示例展示了通过ID查询一个`City`及该`City`所属的`Country`，并将该`Country`写入到属性`City.country`中
+
+通过`association`的`property`声明需要填入数据的POJO关联属性名，并通过`javaType`声明该POJO关联属性的类型，通过`select`声明该POJO关联属性的值数据来源于指定的`select`，并将`column`中声明的结果集列传递到指定的`select`中
+
+示例代码如下：
+
+```xml
+<select id="getCityAndCountryByCityId" resultMap="cityAndCountry">
+    select * from city where id = #{cityId}
+</select>
+
+<resultMap id="cityAndCountry" type="com.example.entity.City">
+    <id property="id" column="ID"/>
+    <result property="name" column="Name"/>
+    <result property="countryCode" column="CountryCode"/>
+    <result property="district" column="District"/>
+    <result property="population" column="Population"/>
+    <association property="country" javaType="com.example.entity.Country" column="CountryCode" select="getCountryByCode"/>
+</resultMap>
+
+<select id="getCountryByCode" resultType="com.example.entity.Country">
+    select * from country where code = #{code}
+</select>
+```
+
+MyBatis在执行Mapper方法`getCityAndCountryByCityId`，会先执行`id`为`getCityAndCountryByCityId`的`select`中的SQL语句，在执行`id`为`getCountryByCode`的`select`中的SQL语句
+
 ###### 多层嵌套关联
+
+可以多次嵌套，用于多个`select`的结果集的互相映射
+
+以下示例展示了通过ID获取一个`City`，以及`City.country`属性所关联的`Country`，以及`Country.capitalCity`所关联的`City`，总共需要执行三次SQL语句
+
+示例代码如下：
+
+```xml
+<select id="getCityAndCountryAndCapital" resultMap="cityAndCountryAndCapital">
+    select id,name,countryCode from city where id = #{cityId}
+</select>
+
+<resultMap id="cityAndCountryAndCapital" type="com.example.entity.City">
+    <id property="id" column="ID"/>
+    <result property="name" column="Name"/>
+    <result property="countryCode" column="CountryCode"/>
+    <association property="country" javaType="com.example.entity.Country" column="CountryCode" select="getCountryAndCapital"/>
+</resultMap>
+
+<select id="getCountryAndCapital" resultMap="countryAndCapital">
+    select code,name,capital from country where code = #{code}
+</select>
+
+<resultMap id="countryAndCapital" type="com.example.entity.Country">
+    <id property="code" column="Code"/>
+    <result property="name" column="Name"/>
+    <result property="capital" column="Capital"/>
+    <association property="capitalCity" javaType="com.example.entity.City" column="Capital" select="getCityById"/>
+</resultMap>
+
+<select id="getCityById" resultType="com.example.entity.City">
+    select * from city where id = #{id}
+</select>
+```
+
+注意不应通过在`association`元素中声明`association`子元素来实现多层嵌套查询
 
 ###### 多参数
 
-###### 延迟加载
+如果目标`select`需要多个参数，应使用如`{param1=column1,param2=column2}`的格式对`association`的`column`属性进行声明，注意不匹配或不正确的声明可能仍正常执行
 
-###### 工作原理
+以下示例用于获取一个`Country`，及`Country.capitalCity`所关联的`City`，示例展示了在目标`select`中需要两个参数的情景，在`association`的`column`属性中将查询结果集的列与参数进行绑定
 
+示例代码如下：
 
+```xml
+<select id="getCountryAndCapitalCityByCode" resultMap="countryAndCapitalCity">
+    select code, name, capital from country where code = #{code}
+</select>
+
+<resultMap id="countryAndCapitalCity" type="com.crim.web.lab.springmvclab.web.entity.Country">
+    <id property="code" column="Code"/>
+    <result property="name" column="Name"/>
+    <result property="capital" column="Capital"/>
+    <association property="capitalCity" javaType="com.example.entity.City" column="{id=Capital,countryCode=Code}" select="getCityByIdAndCountryCode"/>
+</resultMap>
+
+<select id="getCityByIdAndCountryCode" resultType="com.example.entity.City">
+    select * from city where id = #{id} and CountryCode = #{countryCode}
+</select>
+```
+
+###### 工作原理及优化
+
+由于基于嵌套查询的实质是是将SQL语句分开执行，在数据处理的映射阶段再进行关联，这导致这种模式极易发生N+1查询问题
+
+示例：
+
+```xml
+<select id="getCityAndCountryPage" resultMap="cityAndCountry">
+    select * from city limit #{start},#{size}
+</select>
+
+<resultMap id="cityAndCountry" type="com.example.entity.City">
+    <id property="id" column="ID"/>
+    <result property="name" column="Name"/>
+    <result property="countryCode" column="CountryCode"/>
+    <result property="district" column="District"/>
+    <result property="population" column="Population"/>
+    <association property="country" javaType="com.example.Country" column="CountryCode" select="getCountryByCode" fetchType="eager"/>
+</resultMap>
+
+<select id="getCountryByCode" resultType="com.example.entity.Country">
+    select * from country where code = #{code}
+</select>
+```
+
+上述代码在执行时，MyBatis将先从`city`表中查询N条记录，再通过N条记录的`Code`字段值另外执行N条SQL语句以从`country`表中查询
+
+这显然将大幅降低性能，因此MyBatis提供了延迟加载（懒加载）功能
+
+`association`元素提供了一个属性`fetchType`，其值为`lazy`或`eager`，用于控制该关联查询的工作模式是懒加载还是急加载
+
+在急加载模式下，Mapper方法执行过程中MyBatis就将执行N+1条SQL语句，以立即完成查询结果集的关联映射
+
+但在懒加载模式下，Mapper方法执行过程仅执行了1条SQL语句，关联映射尚未完成，而当对应的关联属性需要获取时，SQL语句才开始执行，对应的查询结果集才被映射到该关联属性上，这可以减少Mapper方法的执行时间
+
+但这意味着如果使用了懒加载模式，但在Mapper执行完毕后立刻开始遍历查询结果，将导致总体的性能比急加载更低
+
+MyBatis通过动态代理技术实现懒加载功能，它能够对POJO、`HashMap`等对象进行代理
+
+```
+Tips: 笔者在实际的性能测试中（Spring Boot3、MyBatis 3、Alibaba Druid 1.2、MySQL 8.0），上述代码在懒加载和急加载两种场景下（不包含对结果集的遍历）的性能表现相近，甚至在1000条数据查询下，急加载比懒加载性能表现更优，通过分析数据库日志等手段后推测，主要是因为一级缓存将需要执行的SQL语句数量大幅降至200条，且连接池技术也极大的优化了查询性能，至于为什么懒加载仅一条SQL语句也较急加载性能更差，笔者尚未得知原因，可能是动态代理的黑魔法导致的？
+```
 
 
 
