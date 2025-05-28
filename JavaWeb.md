@@ -1806,6 +1806,87 @@ void test() {
 
 
 
+#### 配置
+
+##### 日志
+
+在`application.properties`配置MyBatis日志输出以在日志中查看SQL的执行和结果，如
+
+```properties
+# 使com包下的日志输出级别为debug
+logging.level.com=debug
+# 使用Spring Boot的SLF4J作为日志输出
+mybatis.configuration.log-impl=org.apache.ibatis.logging.slf4j.Slf4jImpl
+```
+
+通常info级别不会输出SQL语句，debug级别将输出SQL语句及查询结果，trace级别将输出查询结果集
+
+##### IDEA
+
+通过配置IDEA使其更适合基于MyBatis开发
+
+- 配置SQL方言
+
+  用于SQL语法自动检测和语法提示
+
+- 配置数据源
+
+  用于SQL中的表、字段等的自动检测和语法提示
+
+- 安装MyBatisX插件
+
+  用于MyBatis自动检测、语法提示和快捷跳转
+
+##### 连接池
+
+通过配置连接池可以使持久层进行性能优化或支持更多的功能
+
+- 无配置
+
+  Spring Boot 默认使用Hikari连接池
+
+- 配置Druid连接池
+
+  Druid内容参见Druid章节或[官方文档](https://github.com/alibaba/druid)
+
+  引入boot starter依赖，对于Spring Boot 2 如下
+
+  ```xml
+  <dependency>
+      <groupId>com.alibaba</groupId>
+      <artifactId>druid-spring-boot-starter</artifactId>
+      <version>1.2.24</version>
+  </dependency>
+  ```
+
+  对于Spring Boot 3 如下
+
+  ```xml
+  <dependency>
+      <groupId>com.alibaba</groupId>
+      <artifactId>druid-spring-boot-3-starter</artifactId>
+      <version>1.2.24</version>
+  </dependency>
+  ```
+
+  在`application.properties`中配置数据源
+
+  ```properties
+  spring.datasource.druid.url= 
+  # 或spring.datasource.url= 
+  
+  spring.datasource.druid.username= 
+  # 或spring.datasource.username=
+  
+  spring.datasource.druid.password= 
+  # 或spring.datasource.password=
+  
+  spring.datasource.druid.driver-class-name= 
+  #或 spring.datasource.driver-class-name=
+  ```
+
+
+
 #### 基于注解
 
 ##### 概述
@@ -2034,7 +2115,7 @@ public interface UserMapper {
 
 ##### 元素及其属性一览
 
-在`mapper`中可声明的顶级元素如下：
+在`mapper`中可声明的子元素如下：
 
 - `cache` – 该命名空间的缓存配置
 - `cache-ref` – 引用其它命名空间的缓存配置
@@ -2242,84 +2323,179 @@ int insertUser(User user);
 
 
 
-#### 配置
 
-##### 日志
 
-在`application.properties`配置MyBatis日志输出以在日志中查看SQL的执行和结果，如
+### MyBatis 进阶
 
-```properties
-# 使com包下的日志输出级别为debug
-logging.level.com=debug
-# 使用Spring Boot的SLF4J作为日志输出
-mybatis.configuration.log-impl=org.apache.ibatis.logging.slf4j.Slf4jImpl
+
+
+#### 高级结果映射
+
+##### 概述
+
+对于较为复杂的映射，如有复杂映射关系的多个表的连接查询，通过Java和SQL代码将查询结果映射到特定结构的Map或POJO是较为繁琐和困难的，但是，MyBatis提供了诸多特性，用于大幅地简化复杂查询下的结果映射
+
+在XML映射文件中，可通过在`mapper`中声明子元素`resultMap`，并在`select`元素中通过属性`resultMap`进行引用，以实现较为复杂的结果映射
+
+`select`元素中`resultType`和`resultMap`属性只能声明一个
+
+以下示例展示了使用`resultMap`将结果映射到自定义键名的Map、以及解决列名与POJO属性名不匹配的问题：
+
+```java
+Map<String, Object> getUserMapById(Integer id);
+    
+User getUserById(Integer id);
 ```
 
-通常info级别不会输出SQL语句，debug级别将输出SQL语句及查询结果，trace级别将输出查询结果集
+```xml
+<resultMap id="userResultMap" type="map">
+    <id property="id" column="id"/>
+    <result property="name" column="name"/>
+    <result property="phone" column="phone_number"/>
+</resultMap>
 
-##### IDEA
+<resultMap id="userResult" type="com.crim.web.lab.springmvclab.web.entity.User">
+    <id property="id" column="id"/>
+    <result property="name" column="name"/>
+    <result property="phoneNumber" column="phone_number"/>
+</resultMap>
 
-通过配置IDEA使其更适合基于MyBatis开发
+<select id="getUserMapById" resultMap="userResultMap">
+    select * from user where id=#{id}
+</select>
 
-- 配置SQL方言
+<select id="getUserById" resultMap="userResult">
+    select * from user where id= #{id}
+</select>
+```
 
-  用于SQL语法自动检测和语法提示
+##### 元素及属性一览
 
-- 配置数据源
+==TODO==
 
-  用于SQL中的表、字段等的自动检测和语法提示
+`resultMap`
 
-- 安装MyBatisX插件
+属性
 
-  用于MyBatis自动检测、语法提示和快捷跳转
+- `id`
+- `type`
+- `autoMapping`
 
-##### 连接池
+##### 直接映射
 
-通过配置连接池可以使持久层进行性能优化或支持更多的功能
+在`resultMap`元素中声明`id`或`result`子元素，将指定的查询结果集的列映射到POJO（或嵌套的POJO）对象属性或Map（或嵌套的Map）键
 
-- 无配置
+可以将同一个结果集列多次映射到不同的POJO属性或Map键
 
-  Spring Boot 默认使用Hikari连接池
+`id`和`result`的属性共用，它们的区别在于`id`用于在缓存或连接映射中作为对象的标识符以优化性能
 
-- 配置Druid连接池
+可声明的属性如下：
 
-  Druid内容参见Druid章节或[官方文档](https://github.com/alibaba/druid)
+- `property` 被映射的POJO属性名或Map键名，对于嵌套的属性或键，使用`.`符号索引
+- `column` 查询结果集的列名
+- `javaType` Java类全限定名或类型别名，用于映射后的值类型，如果`resultMap`的`type`为键值对，通常需要声明该属性以显式确定值类型
+- `jdbcType`
+- `typeHandler`
 
-  引入boot starter依赖，对于Spring Boot 2 如下
+以下示例分别展示了将查询结果映射到嵌套的POJO对象和自定义值类型的嵌套的`HashMap`中，且同一个列均被重复映射了两次：
 
-  ```xml
-  <dependency>
-      <groupId>com.alibaba</groupId>
-      <artifactId>druid-spring-boot-starter</artifactId>
-      <version>1.2.24</version>
-  </dependency>
-  ```
+```xml
+<mapper namespace="com.example.ExampleMapper">
 
-  对于Spring Boot 3 如下
+    <resultMap id="cityMap1" type="java.util.HashMap">
+        <id property="id" column="ID" javaType="Integer"/>
+        <result property="name" column="Name" javaType="String"/>
+        <result property="country.code" column="CountryCode" javaType="String"/>
+        <result property="countryCode" column="CountryCode" javaType="String"/>
+        <result property="district" column="District" javaType="String"/>
+        <result property="population" column="Population" javaType="Long"/>
+    </resultMap>
 
-  ```xml
-  <dependency>
-      <groupId>com.alibaba</groupId>
-      <artifactId>druid-spring-boot-3-starter</artifactId>
-      <version>1.2.24</version>
-  </dependency>
-  ```
+    <resultMap id="city1" type="com.example.entity.City">
+        <id property="id" column="ID"/>
+        <result property="name" column="Name"/>
+        <result property="country.code" column="CountryCode"/>
+        <result property="countryCode" column="CountryCode"/>
+        <result property="district" column="District"/>
+        <result property="population" column="Population"/>
+    </resultMap>
 
-  在`application.properties`中配置数据源
+    <select id="getCityById" resultMap="city1">
+        select * from city where id = #{id}
+    </select>
 
-  ```properties
-  spring.datasource.druid.url= 
-  # 或spring.datasource.url= 
-  
-  spring.datasource.druid.username= 
-  # 或spring.datasource.username=
-  
-  spring.datasource.druid.password= 
-  # 或spring.datasource.password=
-  
-  spring.datasource.druid.driver-class-name= 
-  #或 spring.datasource.driver-class-name=
-  ```
+    <select id="getCityMapById" resultMap="cityMap1">
+        select * from city where id = #{id}
+    </select>
+
+</mapper>
+```
+
+```java
+@Data
+public class City {
+    /// 表字段
+    // Key
+    private Integer id;
+    private String name;
+    private String countryCode;    
+    private String district;
+    private Integer population;
+    /// 关联字段
+    private Country country;
+}
+```
+
+```java
+@Data
+public class Country {
+    /// 表字段
+    // Key
+    private String code;
+    private String name;
+    private String continent;
+    private String region;
+    private Double surfaceArea;
+    private Integer indepYear;
+    private Integer population;
+    private Double lifeExpectancy;
+    private Double gnp;
+    private Double gnpOld;
+    private String localName;
+    private String governmentForm;
+    private String headOfState;
+    private Integer capital;
+    private String code2;
+    /// 关联字段
+    private City capitalCity;
+    private City[] cities;
+    private CountryLanguage[] languages;
+    private CountryLanguage[] officialLanguages;
+    private CountryLanguage[] unofficialLanguages;
+}
+```
+
+```java
+@Mapper
+public interface ExampleMapper {
+    City getCityById(Integer id);
+    Map<String, Object> getCityMapById(Integer id);
+}
+```
+
+##### 基于嵌套查询关联映射
+
+###### 基础
+
+###### 多层嵌套关联
+
+###### 多参数
+
+###### 延迟加载
+
+###### 工作原理
+
+
 
 
 
