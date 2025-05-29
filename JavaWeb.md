@@ -2513,19 +2513,21 @@ MyBatis的关联映射通过`resultMap`的子元素`association`和`collection`�
 
 而`collection`用于解决一对多问题，典型情景是连接查询的结果集映射到包含POJO的集合属性的一个或多个POJO对象中，如上文的`CountryLanguage`类和`CountryLanguage.countries`属性
 
-`association`有两种工作模式，基于嵌套查询和
+`association`有三种工作模式，基于嵌套查询
+
+无论哪种工作模式`association`中可声明的公共属性有：
 
 ==TODO==
 
-##### 基于嵌套查询关联映射
+##### 基于嵌套查询的关联映射
 
 基于嵌套查询的关联映射的核心思想是通过声明`select`语句之间的关系，使得不同`select`语句分别执行，它们查询结果集按照一对一的关系进行关联映射
 
 基于嵌套查询的`association` 额外声明的属性：
 
-- `column` 作为参数传递给目标`select`的结果集列名，如果目标`select`需要多个参数，应使用如`{param1=column1,param2=column2}`的格式
-- `select` 目标`select`元素的`id`
-- `fetchType` 可选的属性，值为`lazy`懒加载或`eager`急加载，详情参见工作原理及优化
+- `column` 必须，作为参数传递给目标`select`的结果集列名，如果目标`select`需要多个参数，应使用如`{param1=column1,param2=column2}`的格式
+- `select` 必须，目标`select`元素的`id`
+- `fetchType` 可选，值为`lazy`懒加载或`eager`急加载，详情参见工作原理及优化
 
 基于嵌套查询的关联映射的工作模式类似于SQL中的左连接，如果目标`select`查询结果集为空集，那么最终Mapper方法返回值中关联属性的值为null
 
@@ -2654,17 +2656,166 @@ MyBatis在执行Mapper方法`getCityAndCountryByCityId`，会先执行`id`为`ge
 
 在急加载模式下，Mapper方法执行过程中MyBatis就将执行N+1条SQL语句，以立即完成查询结果集的关联映射
 
-但在懒加载模式下，Mapper方法执行过程仅执行了1条SQL语句，关联映射尚未完成，而当对应的关联属性需要获取时，SQL语句才开始执行，对应的查询结果集才被映射到该关联属性上，这可以减少Mapper方法的执行时间
+但在懒加载模式下，MyBatis通过动态代理技术，对POJO、`HashMap`等对象进行代理，Mapper方法执行过程仅执行了1条SQL语句，关联映射尚未完成，而当对应的关联属性需要获取时，SQL语句才开始执行，对应的查询结果集才被映射到该关联属性上，这可以减少Mapper方法的执行时间
 
 但这意味着如果使用了懒加载模式，但在Mapper执行完毕后立刻开始遍历查询结果，将导致总体的性能比急加载更低
 
-MyBatis通过动态代理技术实现懒加载功能，它能够对POJO、`HashMap`等对象进行代理
+为了更好的性能，推荐使用其他工作模式的关联映射，详情见下文
 
 ```
 Tips: 笔者在实际的性能测试中（Spring Boot3、MyBatis 3、Alibaba Druid 1.2、MySQL 8.0），上述代码在懒加载和急加载两种场景下（不包含对结果集的遍历）的性能表现相近，甚至在1000条数据查询下，急加载比懒加载性能表现更优，通过分析数据库日志等手段后推测，主要是因为一级缓存将需要执行的SQL语句数量大幅降至200条，且连接池技术也极大的优化了查询性能，至于为什么懒加载仅一条SQL语句也较急加载性能更差，笔者尚未得知原因，可能是动态代理的黑魔法导致的？
 ```
 
+##### 基于嵌套结果映射的关联映射
 
+基于嵌套结果映射的核心思想是将多个`resultMap`或`association`嵌套声明或关联起来，使得其结构与相应的嵌套POJO或Map对应，以用于将SQL连接查询的结果集映射到对应的数据结构
+
+基于嵌套结果映射的`association`可以声明的属性有：
+
+- `resultMap` 可选，被嵌套的结果映射`resultMap`的ID
+- `columnPrefix` 可选，列前缀，详情参见下文
+- `notNullColumn` 可选，非空列，详情参见下文
+- `autoMapping` 可选，自动映射，详情参见下文
+
+###### 基础
+
+通过在`association`中声明更多的`id`或`result`子元素使得连接查询中的若干列可以被映射到被嵌套的POJO对象或Map中
+
+以下示例展示了通过这种方式将连表查询的查询结果集映射到`Country`对象以及`Country.capitalCity`属性中
+
+```xml
+<select id="getCountryAndCapitalCityPage" resultMap="countryAndCapitalCity">
+    select country.code       as countryCode,
+           country.name       as countryName,
+           country.Population as countryPopulation,
+           country.capital    as capitalCityId,
+           city.ID            as capital,
+           city.name          as capitalCityName,
+           city.Population    as capitalCityPopulation
+    from country
+             left join city on country.capital = city.id
+    limit #{start},#{size}
+</select>
+
+<resultMap id="countryAndCapitalCity" type="com.example.entity.Country">
+    <id property="code" column="countryCode"/>
+    <result property="name" column="countryName"/>
+    <result property="population" column="countryPopulation"/>
+    <result property="capital" column="capitalCityId"/>
+    <association property="capitalCity" javaType="com.example.entity.City">
+        <id property="id" column="capital"/>
+        <result property="name" column="capitalCityName"/>
+        <result property="population" column="capitalCityPopulation"/>
+    </association>
+</resultMap>
+```
+
+可以通过`association`的`resultMap`属性，复用其他`resultMap`中的子元素声明，如上述示例与以下示例等效，它使用了`resultMap`属性将`association`元素复用了另一个`resultMap`元素
+
+```xml
+<select id="getCountryAndCapitalCityPage" resultMap="countryAndCapitalCity">
+    select country.code       as countryCode,
+           country.name       as countryName,
+           country.Population as countryPopulation,
+           country.capital    as capitalCityId,
+           city.ID            as capital,
+           city.name          as capitalCityName,
+           city.Population    as capitalCityPopulation
+    from country
+            left join city on country.capital = city.id
+    limit #{start},#{size}
+</select>
+
+<resultMap id="countryAndCapitalCity" type="com.entity.entity.Country">
+    <id property="code" column="countryCode"/>
+    <result property="name" column="countryName"/>
+    <result property="population" column="countryPopulation"/>
+    <result property="capital" column="capitalCityId"/>
+    <association property="capitalCity" javaType="com.entity.entity.City" resultMap="capitalCity"/>
+</resultMap>
+
+<resultMap id="capitalCity" type="com.entity.entity.City">
+    <id property="id" column="capital"/>
+    <result property="name" column="capitalCityName"/>
+    <result property="population" column="capitalCityPopulation"/>
+</resultMap>
+```
+
+###### 多层嵌套关联
+
+结果映射的嵌套也可以是多层的，以用于超过两层的POJO或Map嵌套的数据结构的映射
+
+可通过在`association`元素中声明`association`子元素来实现多层嵌套，如以下示例展示了通过这种方式将连接查询映射到一个`City`对象以及`City.country`属性、以及`City.country.capitalCity`属性
+
+```xml
+<select id="getCityAndCountryAndCapitalCityPage" resultMap="cityAndCountryAndCapitalCity">
+    select city1.ID           as cityID,
+           city1.name         as cityName,
+           city1.Population   as cityPopulation,
+           country.code       as countryCode,
+           country.name       as countryName,
+           country.Population as countryPopulation,
+           country.capital    as capitalCityId,
+           city2.ID           as capital,
+           city2.name         as capitalCityName,
+           city2.Population   as capitalCityPopulation
+    from city as city1
+             left join country on city1.CountryCode = country.code
+             left join city as city2 on country.capital = city2.id
+    limit #{start},#{size}
+</select>
+
+<resultMap id="cityAndCountryAndCapitalCity" type="com.example.entity.City">
+    <id property="id" column="cityID"/>
+    <result property="name" column="cityName"/>
+    <result property="population" column="cityPopulation"/>
+    <association property="country" javaType="com.example.entity.Country">
+        <id property="code" column="countryCode"/>
+        <result property="name" column="countryName"/>
+        <result property="population" column="countryPopulation"/>
+        <result property="capital" column="capitalCityId"/>
+        <association property="capitalCity" javaType="com.example.entity.City">
+            <id property="id" column="capital"/>
+            <result property="name" column="capitalCityName"/>
+            <result property="population" column="capitalCityPopulation"/>
+        </association>
+    </association>
+</resultMap>
+```
+
+多层嵌套同样可以是多层复用`resultMap`元素，如下示例与上述示例等效
+
+```xml
+<resultMap id="cityAndCountryAndCapitalCity" type="com.example.entity.City">
+    <id property="id" column="cityID"/>
+    <result property="name" column="cityName"/>
+    <result property="population" column="cityPopulation"/>
+    <association property="country" javaType="com.example.entity.Country" resultMap="countryAndCapitalCity"/>
+</resultMap>
+<resultMap id="countryAndCapitalCity" type="com.example.entity.Country">
+    <id property="code" column="countryCode"/>
+    <result property="name" column="countryName"/>
+    <result property="population" column="countryPopulation"/>
+    <result property="capital" column="capitalCityId"/>
+    <association property="capitalCity" javaType="com.example.entity.City" resultMap="capitalCity"/>
+</resultMap>
+
+<resultMap id="capitalCity" type="com.example.entity.City">
+    <id property="id" column="capital"/>
+    <result property="name" column="capitalCityName"/>
+    <result property="population" column="capitalCityPopulation"/>
+</resultMap>
+```
+
+多层嵌套功能相当强大，使得不同工作模式的`association`、`collection`以及`resultMap`元素可以互相嵌套关联，以用于复杂数据结构的映射，以及映射的代码复用、性能优化
+
+考虑到多层嵌套的性能优化是个庞大的话题，受实际的MyBatis映射逻辑、缓存、连接池、数据库、SQL等等多因素影响，依赖开发者的综合考量和实践测试，此处不做展开说明
+
+###### 列前缀
+
+###### 非空列
+
+###### 工作原理及优化
 
 
 
