@@ -2371,17 +2371,15 @@ User getUserById(Integer id);
 </select>
 ```
 
-##### 元素及属性一览
+##### 结果映射
 
-==TODO==
+`resultMap`元素是实现结果映射的核心元素
 
-`resultMap`
+其可以声明的属性有：
 
-属性
-
-- `id`
-- `type`
-- `autoMapping`
+- `id` 唯一标识该结果映射的ID
+- `type` Java类全限定名或类型别名，用于映射后的值类型
+- `autoMapping` 自动映射，详情参见下文
 
 ##### 直接映射
 
@@ -2389,7 +2387,7 @@ User getUserById(Integer id);
 
 可以将同一个结果集列多次映射到不同的POJO属性或Map键
 
-`id`和`result`的属性共用，它们的区别在于`id`用于在缓存或关联映射中作为对象的标识符以优化性能
+`id`和`result`的属性共用，它们的区别在于`id`用于在缓存或关联映射和集合映射中作为对象的标识符以优化性能
 
 可声明的属性如下：
 
@@ -2491,7 +2489,7 @@ public class CountryLanguage {
     // CountryCode关联国家
     private Country country;
     // 所有使用了该语言的国家
-    private Country[] countries;
+    private List<Country> countries;
 }
 ```
 
@@ -2503,21 +2501,32 @@ public interface ExampleMapper {
 }
 ```
 
-##### 关联映射
+##### 对象树映射
 
-如果需要将连接查询（或可视为连接查询的查询功能）结果集映射到嵌套的POJO或Map中，在代码实现上较为繁琐，不过MyBatis提供了关联映射用于解决这一问题
+如果需要将连接查询（或可视为连接查询的查询功能）结果集映射到对象树（如嵌套的POJO或Map中），在代码实现上较为繁琐，不过MyBatis提供了便捷的方法用于解决这一问题
 
-MyBatis的关联映射通过`resultMap`的子元素`association`和`collection`实现
+以下将一对一映射问题称为关联映射，将一对多映射问题称为集合映射
+
+MyBatis的关联映射和集合映射分别通过`resultMap`的子元素`association`和`collection`实现
 
 其中`association`用于解决一对一映射问题，典型情景是将连接查询的结果集映射到一个或多个包含POJO类型属性的嵌套POJO对象中，如上文的`City`类和`City.country`属性
 
 而`collection`用于解决一对多问题，典型情景是连接查询的结果集映射到包含POJO的集合属性的一个或多个POJO对象中，如上文的`CountryLanguage`类和`CountryLanguage.countries`属性
 
-`association`有三种工作模式，基于嵌套查询
+##### 关联映射
 
-无论哪种工作模式`association`中可声明的公共属性有：
+`association`有三种工作模式：
 
-==TODO==
+- 基于嵌套查询
+- 基于嵌套结果映射
+- 基于多结果集
+
+不同工作模式有额外的需要声明的属性，而无论哪种工作模式`association`中可声明的公共属性有：
+
+- `property` 该关联映射所对应的POJO属性名或Map的键名，对于嵌套的属性或键，使用`.`符号索引
+- `javaType`  Java类全限定名或类型别名，用于映射后的值类型，如果`resultMap`的`type`为键值对，通常需要声明该属性以显式确定值类型，如果是POJO类型，MyBatis通常可以自动识别
+- `jdbcType`
+- `typeHandler`
 
 ##### 基于嵌套查询的关联映射
 
@@ -2792,6 +2801,7 @@ Tips: 笔者在实际的性能测试中（Spring Boot3、MyBatis 3、Alibaba Dru
     <result property="population" column="cityPopulation"/>
     <association property="country" javaType="com.example.entity.Country" resultMap="countryAndCapitalCity"/>
 </resultMap>
+
 <resultMap id="countryAndCapitalCity" type="com.example.entity.Country">
     <id property="code" column="countryCode"/>
     <result property="name" column="countryName"/>
@@ -2813,9 +2823,362 @@ Tips: 笔者在实际的性能测试中（Spring Boot3、MyBatis 3、Alibaba Dru
 
 ###### 列前缀
 
+在复用其他`resultMap`元素时，如果其他`resultMap`元素中`id`或`result`元素声明的`column`与现有的冲突，将导致意外的错误映射
+
+因此MyBatis提供了`columnPrefix`属性，使得可以为被复用的`resultMap`的所有`column`新增列前缀，以用于解决列名冲突
+
+以下示例展示了通过列前缀解决两个`resultMap`列名冲突的问题：
+
+```xml
+<select id="getCountryAndCapitalCityPage" resultMap="countryAndCapitalCity">
+    select country.code       as Code,
+           country.name       as Name,
+           country.Population as Population,
+           country.capital    as Capital,
+           city.ID            as CapitalID,
+           city.name          as CapitalName,
+           city.Population    as CapitalPopulation
+    from country
+             left join city on country.capital = city.id
+    limit #{start},#{size}
+</select>
+
+<resultMap id="countryAndCapitalCity" type="com.example.entity.Country">
+    <id property="code" column="Code"/>
+    <result property="name" column="Name"/>
+    <result property="population" column="Population"/>
+    <result property="capital" column="Capital"/>
+    <association property="capitalCity" javaType="com.example.entity.City" resultMap="capitalCity" columnPrefix="Capital"/>
+</resultMap>
+
+<resultMap id="capitalCity" type="com.example.entity.City">
+    <id property="id" column="ID"/>
+    <result property="name" column="Name"/>
+    <result property="population" column="Population"/>
+</resultMap>
+```
+
+在多层嵌套的`resultMap`中，外层列前缀的声明会影响所有内层的列名，且外层列前缀永远在内层列前缀之前
+
+以下示例展示了多层嵌套中列前缀的使用，其中外层的列前缀为`t`而内层的列前缀为`r`：
+
+```xml
+<select id="getCityAndCountryAndCapitalCity" resultMap="cityAndCountryAndCapitalCity">
+    select city1.ID           as ID,
+           city1.Name         as Name,
+           city1.Population   as Population,
+           country.Code       as tCode,
+           country.Name       as tName,
+           country.Population as tPopulation,
+           country.Capital    as tCapital,
+           city2.ID           as trID,
+           city2.Name         as trName,
+           city2.Population   as trPopulation
+    from city as city1
+             left join country on city1.CountryCode = country.Code
+             left join city as city2 on country.Capital = city2.ID
+    limit #{start},#{size}
+</select>
+
+<resultMap id="cityAndCountryAndCapitalCity" type="com.example.entity.City">
+    <id property="id" column="ID"/>
+    <result property="name" column="Name"/>
+    <result property="population" column="Population"/>
+    <association property="country" resultMap="countryAndCapitalCity" columnPrefix="t"/>
+</resultMap>
+
+<resultMap id="countryAndCapitalCity" type="com.example.entity.Country">
+    <id property="code" column="Code"/>
+    <result property="name" column="Name"/>
+    <result property="population" column="Population"/>
+    <result property="capital" column="Capital"/>
+    <association property="capitalCity" resultMap="capitalCity" columnPrefix="r"/>
+</resultMap>
+
+<resultMap id="capitalCity" type="com.example.entity.City">
+    <id property="id" column="ID"/>
+    <result property="name" column="Name"/>
+    <result property="population" column="Population"/>
+</resultMap>
+```
+
+即使是不复用`resultMap`，仅在`association`中声明`id`和`result`子元素，列前缀同样可用，示例如下：
+
+```xml
+<select id="getCountryAndCapitalCityPage" resultMap="countryAndCapitalCity">
+    select country.code       as Code,
+           country.name       as Name,
+           country.Population as Population,
+           country.capital    as Capital,
+           city.ID            as CapitalID,
+           city.name          as CapitalName,
+           city.Population    as CapitalPopulation
+    from country
+             left join city on country.capital = city.id
+    limit #{start},#{size}
+</select>
+
+<resultMap id="countryAndCapitalCity" type="com.example.entity.Country">
+    <id property="code" column="Code"/>
+    <result property="name" column="Name"/>
+    <result property="population" column="Population"/>
+    <result property="capital" column="Capital"/>
+    <association property="capitalCity" javaType="com.example.entity.City" columnPrefix="Capital">
+        <id property="id" column="ID"/>
+        <result property="name" column="Name"/>
+        <result property="population" column="Population"/>
+    </association>
+</resultMap>
+```
+
 ###### 非空列
 
+默认情况下，如果一个连接查询的结果集需要映射到一个对象树（如嵌套的POJO对象或嵌套的Map对象）中，仅当内层对象的所有列为`null`时，该内层对象才不会被创建，即该对象为`null`
+
+可以使用`association`的`notNullColumn`改变这一行为，通过在`notNullColumn`中声明一个或多个列（使用`,`符分隔），使得该内层对象的这些列所对应的字段至少有一个不为`null`，如果这些列均为`null`，那么该内层对象不会被创建
+
+如下示例展示了这一用法，其Mapper方法的返回值中所有的非`null`的`Country.capitalCity`对象的`id`和`name`属性值至少一个不为`null`：
+
+```xml
+<select id="getCountryAndCapitalCityPage" resultMap="countryAndCapitalCity">
+    select country.code                               as Code,
+           country.name                               as Name,
+           country.Population                         as Population,
+           country.capital                            as Capital,
+           if(city.ID &lt; 50, city.ID, null)         as CID,
+           if(instr(city.name, 'u'), null, city.Name) as CName,
+           city.Population                            as CPopulation
+    from country
+             left join city on country.capital = city.id
+    limit #{start},#{size}
+</select>
+
+<resultMap id="countryAndCapitalCity" type="com.example.entity.Country">
+    <id property="code" column="Code"/>
+    <result property="name" column="Name"/>
+    <result property="population" column="Population"/>
+    <result property="capital" column="Capital"/>
+    <association property="capitalCity" javaType="com.example.entity.City" columnPrefix="C" notNullColumn="ID,Name">
+        <id property="id" column="ID"/>
+        <result property="name" column="Name"/>
+        <result property="population" column="Population"/>
+    </association>
+</resultMap>
+```
+
 ###### 工作原理及优化
+
+为了将连表查询的结果映射到对象树中，MyBatis需要能够唯一地识别外层对象，以用于将内层对象设置到正确的外层对象中，因此`id`元素重要的
+
+MyBatis通过`id`元素唯一地索引外层对象，这可以提高索引性能，如果没有`id`元素，映射性能将下降
+
+```
+这段写不下去了，因为实测有没有`id`元素性能差距甚至不如测试误差，需要更大的数据集以用于测试。。。
+```
+
+##### 基于多结果集的关联映射
+
+基于多结果集的关联映射通过一次性执行多个语句，已获得多个结果集，从而不依赖连接查询就能实现关联映射，从MyBatis 3.2.3开始支持
+
+基于多结果集映射的`association`可以声明的属性有：
+
+- `column`
+- `foreignColumn`
+- `resultSet`
+
+由于部分主流数据库不支持多结果集，此章节不做展开阐述
+
+##### 集合映射
+
+`collection`与`association`的用法极为相似，有同样三种工作模式：
+
+- 基于嵌套查询
+- 基于嵌套结果映射
+- 基于多结果集
+
+同样有在不同工作模式下可声明的公共属性，与`association`不同之处在于`javaType`属性用于声明集合类型，而`ofType`属性用于声明集合中元素的类型
+
+- `property` 该关联映射所对应的POJO属性名或Map的键名，对于嵌套的属性或键，使用`.`符号索引
+- `javaType` Java类全限定名或类型别名，用于映射后的集合的类型，如果`resultMap`的`type`为键值对，通常需要声明该属性以显式确定值类型，如果是POJO类型，MyBatis通常可以自动识别
+- `ofType` Java类全限定名或类型别名，用于映射后的集合的元素值类型，受限于Java泛型特性，通常需要显式声明
+- `jdbcType`
+- `typeHandler`
+
+注意，不推荐将集合映射用于POJO的数组类型上，这是因为MyBatis对数组类型的支持度很低，易发生异常或未定义行为
+
+##### 基于嵌套查询的集合映射
+
+基于嵌套查询的`collection` 额外声明的属性：
+
+- `column` 必须，作为参数传递给目标`select`的结果集列名，如果目标`select`需要多个参数，应使用如`{param1=column1,param2=column2}`的格式
+- `select` 必须，目标`select`元素的`id`
+- `fetchType` 可选，值为`lazy`懒加载或`eager`急加载，详情参见工作原理及优化
+
+与`association`的用法几乎一致，不同之处在于`association`所嵌套的目标`select`的结果集应只包含一条记录，而`collection`所嵌套的目标`select`的结果集通常包含多条记录
+
+以下这个复杂的示例展示了包含多层嵌套的集合映射、多参数、懒加载等多个特性的用法，用于实现获取一个`Country`以及该`Country`的所有官方语言`Country.officalLanguages: List<CountryLanguage>`，以及所有这些语言各自的使用者国家`CountryLanguage.countries: List<Country>`
+
+```xml
+<select id="getCountryAndOfficialLanguagesAndUsingCountriesByCountryCode" resultMap="CountryAndOfficialLanguagesAndUsingCountries">
+    select Code, Name, Continent, Population, (select 'T') as TValue
+    from country
+    where Code = #{code};
+</select>
+
+<!-- 此处使用了多参数和懒加载 -->
+<resultMap id="CountryAndOfficialLanguagesAndUsingCountries" type="com.example.entity.Country">
+    <id property="code" column="Code"/>
+    <result property="name" column="Name"/>
+    <result property="continent" column="Continent"/>
+    <result property="population" column="Population"/>
+    <collection property="officialLanguages" javaType="list" ofType="com.example.entity.CountryLanguage" select="getCountryLanguagesAndUsingCountriesByCountryCodeAndIsOfficial" column="{code=Code,isOfficial=TValue}" fetchType="lazy"/>
+</resultMap>
+
+<select id="getCountryLanguagesAndUsingCountriesByCountryCodeAndIsOfficial" resultMap="CountryLanguagesAndUsingCountriesByCountryCodeAndIsOfficial">
+    select CountryCode, Language, IsOfficial, Percentage
+    from countrylanguage
+    where CountryCode = #{code}
+      and IsOfficial = #{isOfficial};
+</select>
+
+<!-- 内层collection映射，使用了急加载 -->
+<!-- 如果此处忽略ofType属性不会发生异常，因为类型已在内层resultMap中定义 -->
+<resultMap id="CountryLanguagesAndUsingCountriesByCountryCodeAndIsOfficial" type="com.example.entity.CountryLanguage">
+    <id property="countryCode" column="CountryCode"/>
+    <id property="language" column="Language"/>
+    <result property="isOfficial" column="IsOfficial"/>
+    <result property="percentage" column="Percentage"/>
+    <collection property="countries" ofType="com.crim.web.lab.springmvclab.web.entity.Country" select="getCountriesByLanguage" column="Language" fetchType="eager"/>
+</resultMap>
+
+<select id="getCountriesByLanguage" resultMap="Countries">
+    select cl.CountryCode as Code, c.Name, c.Continent, c.Population
+    from countrylanguage as cl
+             left join country as c on cl.CountryCode = c.Code
+    where cl.Language = #{language};
+</select>
+
+<resultMap id="Countries" type="com.example.entity.Country">
+    <id property="code" column="Code"/>
+    <result property="name" column="Name"/>
+    <result property="continent" column="Continent"/>
+    <result property="population" column="Population"/>
+</resultMap>
+```
+
+##### 基于嵌套结果映射的集合映射
+
+基于嵌套结果映射的`collection`可以声明的属性有：
+
+- `resultMap` 可选，被嵌套的结果映射`resultMap`的ID
+- `columnPrefix` 可选，列前缀
+- `notNullColumn` 可选，非空列
+- `autoMapping` 可选，自动映射，详情参见下文
+
+与`association`的用法几乎一致，以下这个复杂的示例展示了包含多层嵌套、列前缀等多个特性的用法，用于实现获取一个`Country`以及该`Country`的所有官方语言`Country.officalLanguages: List<CountryLanguage>`，以及所有这些语言各自的使用者国家`CountryLanguage.countries: List<Country>`
+
+```xml
+<select id="getCountryAndOfficialLanguagesAndCountries" resultMap="countryAndOfficialLanguagesAndCountries">
+    select c1.Code         as Code,
+           c1.Name         as Name,
+           c1.Continent    as Continent,
+           c1.Population   as Population,
+           lg1.CountryCode as CountryCode,
+           lg1.Language    as Language,
+           lg1.IsOfficial  as IsOfficial,
+           lg1.Percentage  as Percentage,
+           lg2.CountryCode as tCode,
+           c2.Name         as tName,
+           c2.Continent    as tContinent,
+           c2.Population   as tPopulation
+    from country as c1
+             left join countrylanguage as lg1 on c1.Code = lg1.CountryCode
+             left join countrylanguage as lg2 on lg1.Language = lg2.Language
+             left join country as c2 on lg2.CountryCode = c2.Code
+    where lg1.IsOfficial = 'T'
+      and c1.Code = #{code};
+</select>
+
+<resultMap id="countryAndOfficialLanguagesAndCountries" type="com.example.entity.Country">
+    <id property="code" column="Code"/>
+    <result property="name" column="Name"/>
+    <result property="continent" column="Continent"/>
+    <result property="population" column="Population"/>
+    <collection property="officialLanguages" ofType="com.example.entity.CountryLanguage">
+        <id property="countryCode" column="CountryCode"/>
+        <id property="language" column="Language"/>
+        <result property="isOfficial" column="IsOfficial"/>
+        <result property="percentage" column="Percentage"/>
+        <collection property="countries" ofType="com.example.entity.Country" columnPrefix="t">
+            <id property="code" column="Code"/>
+            <result property="name" column="Name"/>
+            <result property="continent" column="Continent"/>
+            <result property="population" column="Population"/>
+        </collection>
+    </collection>
+</resultMap>
+```
+
+当然，上述的`resultMap`也可以写成以下这种形式
+
+```xml
+<resultMap id="countryAndOfficialLanguagesAndCountries" type="com.crim.web.lab.springmvclab.web.entity.Country">
+    <id property="code" column="Code"/>
+    <result property="name" column="Name"/>
+    <result property="continent" column="Continent"/>
+    <result property="population" column="Population"/>
+    <collection property="officialLanguages" ofType="com.example.entity.CountryLanguage" resultMap="officialLanguages"/>
+</resultMap>
+
+<resultMap id="officialLanguages" type="com.crim.web.lab.springmvclab.web.entity.CountryLanguage">
+    <id property="countryCode" column="CountryCode"/>
+    <id property="language" column="Language"/>
+    <result property="isOfficial" column="IsOfficial"/>
+    <result property="percentage" column="Percentage"/>
+    <collection property="countries" ofType="com.example.entity.Country" columnPrefix="t" resultMap="countries"/>
+</resultMap>
+
+<resultMap id="countries" type="com.example.entity.Country">
+    <id property="code" column="Code"/>
+    <result property="name" column="Name"/>
+    <result property="continent" column="Continent"/>
+    <result property="population" column="Population"/>
+</resultMap>
+```
+
+##### 基于多结果集的集合映射
+
+基于多结果集映射的`collection`可以声明的属性有：
+
+- `column`
+- `foreignColumn`
+- `resultSet`
+
+由于部分主流数据库不支持多结果集，此章节不做展开阐述
+
+##### 构造器
+
+如果结果集在映射到POJO对象树中时，某些POJO对象的某些属性值需要通过构造方法传入而不是Setter方法，可以使用`constructor`元素
+
+通过`constructor`元素的`idArg`、`arg`子元素及这些子元素的`column`、`javaType`、`jdbcType`、`typeHandler`、`select`、`resultMap`、`name`，以实现特定列或关联映射的结果集映射到POJO类型的构造器的某参数上
+
+此处不做展开，详情参考[构造器](https://mybatis.org/mybatis-3/zh_CN/sqlmap-xml.html)
+
+##### 鉴别器
+
+如果需要从结果集中的某列的值判断以决定映射的对象的类型（通常用于某POJO类型存在多个派生类型），或从结果集中的某列的值判断以决定特定列是否映射，可以使用`discriminator`元素
+
+`discriminator`元素使用`column`属性和`case`子元素判断结果集的某列是否匹配某`case`子元素，以决定使用特定`case`子元素所声明的`resultMap`或`resultType`、`result`等属性和元素的组合，动态的实现列或类型的映射
+
+此处不做展开，详情参考[鉴别器](https://mybatis.org/mybatis-3/zh_CN/sqlmap-xml.html)
+
+##### 最佳实践
+
+一次性编写复杂的`resultMap`是不可取的，这是因为MyBatis特性众多，且XML的形式易发生意料之外的、未定义的、或令人难以理解的异常，结合单元测试，从一个尽可能简单的`resultMap`出发逐步嵌套扩展成完整的`resultMap`更符合实际
+
+
+
+
 
 
 
