@@ -3172,11 +3172,37 @@ MyBatis通过`id`元素唯一地索引外层对象，这可以提高索引性能
 
 此处不做展开，详情参考[鉴别器](https://mybatis.org/mybatis-3/zh_CN/sqlmap-xml.html)
 
+##### 自动映射
+
+在默认情况下，当查询结果集中的部分列未在`resultMap`中显式地声明映射的属性时，MyBatis会尝试进行自动映射
+
+自动映射默认通过忽略大小写进行列名称与属性名称匹配，如果配置了`map-underscore-to-camel-case`为`true`，则将处理包含下划线命名与驼峰命名转换后的匹配
+
+可以通过全局配置`auto-mapping-behavior`或`resultMap`、`association`、`collection`的`autoMapping`配置自动映射
+
+有三种自动映射等级：
+
+- `NONE` 禁用自动映射
+- `PARTIAL` 在存在嵌套映射时，考虑同名称属性，不做可能导致歧义的映射
+- `FULL` 对所有未显式声明映射的列进行自动映射
+
+默认的自动映射等级为`PARTIAL`，不推荐使用`FULL`等级的自动映射，因为这通常容易导致预期之外的映射
+
+因此最佳实践是使用全局`auto-mapping-behavior=NONE`禁用自动映射，在SQL中显式声明所有返回列，在`resultMap`中显式声明结果集所有列与属性之间的映射
+
+自动映射的详细特性此处不做展开
+
 ##### 最佳实践
 
 一次性编写复杂的`resultMap`是不可取的，这是因为MyBatis特性众多，且XML的形式易发生意料之外的、未定义的、或令人难以理解的异常，结合单元测试，从一个尽可能简单的`resultMap`出发逐步嵌套扩展成完整的`resultMap`更符合实际
 
 
+
+#### 缓存
+
+==TODO 空的章节==
+
+https://mybatis.org/mybatis-3/zh_CN/sqlmap-xml.html
 
 
 
