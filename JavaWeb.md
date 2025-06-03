@@ -264,6 +264,10 @@ connection.close(); // 实质上归还了连接而不是立即关闭连接
 
 
 
+
+
+
+
 ## 工具链
 
 
@@ -1887,7 +1891,7 @@ mybatis.configuration.log-impl=org.apache.ibatis.logging.slf4j.Slf4jImpl
 
 
 
-#### 基于注解
+#### 基于注解映射
 
 ##### 概述
 
@@ -2321,6 +2325,184 @@ int insertUser(User user);
 <insert id="insertUser" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
     insert into user(name,phone_number) values(#{name},#{phoneNumber})
 </insert>
+```
+
+##### 动态SQL
+
+###### 概述
+
+动态SQL用于通过参数的值判断以决定最终执行的SQL语句
+
+考虑以下场景以理解动态SQL技术的作用与意义：
+
+- 需要以POJO对象作为参数更新数据库中的记录，但值为`null`的属性应当被忽略
+- 需要通过若干个参数进行复杂的条件查询，但并非每次查询都需要所有的参数作为条件
+- 需要在SQL语句中使用`in`子句并用一个列表作为参数
+- 等等
+
+MyBatis提供了一些元素用于简单地实现动态SQL，它们包括：
+
+- `if` 通过OGNL表达式判断以决定是否使用该SQL片段
+- `choose`/`when`/`otherwise` 通过OGNL表达式判断以在多个SQL片段中选择一个
+- `where` 自动识别内部的SQL片段，以去除可能的多余的`AND`、`OR`、`WHERE`等关键字，以保持SQL语句语法的正确
+- `set` 自动识别内部的SQL片段，以去除可能的多余的`,`符号，以保持SQL语句语法的正确
+- `trim` 自定义需要自动识别并去除的字符串，以保持SQL语句语法的正确
+- `foreach` 从集合遍历以生成自定义的SQL片段
+- `script` 在基于注解的映射中声明使用动态SQL功能
+- `bind` 支持OGNL表达式创建变量
+
+###### if
+
+`if`元素仅有一个属性`test`，其值为OGNL表达式，当表达式值为`true`时，拼接`if`元素内的SQL片段，否则忽略
+
+示例：
+
+```xml
+<select id="getLanguageByCountryCode" resultType="com.example.entity.CountryLanguage">
+    select * from countrylanguage
+    where CountryCode = #{countryCode}
+    <if test="isOfficial != null">
+        and IsOfficial = #{isOfficial}
+    </if>
+</select>
+```
+
+###### choose/when/otherwise
+
+`choose`元素中可声明`when`和`otherwise`子元素，其中`otherwise`应声明在`when`元素之后，或可不声明
+
+`when`元素仅有一个属性`test`，其值为OGNL表达式，当表达式值为`true`时，拼接`when`元素内的SQL片段，并忽略接下来的所有`when`和`otherwise`元素，否则按顺序检查下一个`when`或`otherwise`元素
+
+示例：
+
+```xml
+<select id="getLanguageByCountryCode" resultType="com.example.entity.CountryLanguage">
+    select * from countrylanguage
+    where CountryCode = #{countryCode}
+    <choose>
+        <when test="isOfficial == true">
+            and IsOfficial = 'T'
+        </when>
+        <when test="isOfficial == false">
+            and IsOfficial = 'F'
+        </when>
+        <otherwise/>
+    </choose>
+</select>
+```
+
+###### where
+
+`where`元素可用于包裹`where`子句并替换`where`关键字，用于当整个`where`子句拼接完后判断子句的开头是否有多余的`and`或`or`关键字，如果有则去除
+
+特别的，如果整个`where`子句为空，`where`关键字也将被忽略
+
+注意它不会去除`where`子句末尾的`and`或`or`关键字
+
+示例
+
+```xml
+<select id="getLanguageByCountryCode" resultType="com.example.entity.CountryLanguage">
+    select * from countrylanguage
+    <where>
+        <if test="countryCode != null">
+            or CountryCode = #{countryCode}
+        </if>
+        <if test="isOfficial != null">
+            and IsOfficial = #{isOfficial}
+        </if>
+    </where>
+</select>
+```
+
+###### set
+
+`set`元素可用于包裹`set`子句并替换`set`关键字，用于当整个`set`子句拼接完后判断子句的开头或末尾是否有多余的`,`符号，如果有则去除
+
+特别的，如果整个`set`子句为空，`set`关键字也将被忽略
+
+```xml
+<update id="updateUserById">
+    update user
+    <set>
+        <if test="name != null">
+            ,name = #{name},
+        </if>
+        <if test="phoneNumber != null">
+            phone_number = #{phoneNumber},
+        </if>
+    </set>
+    where id = #{id}
+</update>
+```
+
+###### trim
+
+`trim`元素可以实现高度自定义的类似于`where`或`set`元素的功能
+
+`trim`元素中可以声明SQL片段和XML元素
+
+`trim`元素可声明的属性有：
+
+- `prefix` 前缀，当最终的SQL片段不为空时，在SQL片段中添加该前缀
+- `suffix` 后缀，当最终的SQL片段不为空时，在SQL片段中添加该后缀
+- `prefixOverrides` 去除的前缀，忽略大小写，当最终的SQL片段包含指定的前缀时，去除该前缀，如果需要指定多个，使用`|`符号分隔
+- `suffixOverrides` 去除的后缀，忽略大小写，当最终的SQL片段包含指定的后缀时，去除该后缀，如果需要指定多个，使用`|`符号分隔
+
+示例：
+
+```xml
+<select id="getUsers" resultType="com.example.entity.User">
+    select * from user
+    <trim prefix="/*123" suffix="456*/" prefixOverrides="foo" suffixOverrides="baz| FOOBAR">
+        foobar foobar
+    </trim>
+</select>
+```
+
+上述示例构造的SQL语句为`select * from user /*123 bar 456*/`
+
+一般的，在处理关键字时，空格通常很重要，例如要去除最终SQL片段前后多余的`AND`和`OR`关键字时，正确的写法应该是`prefixOverrides="AND |OR " suffixOverrides=" AND| OR"`
+
+###### foreach
+
+`foreach`元素可以实现通过对集合进行遍历以生成自定义的SQL片段
+
+`foreach`元素中可以声明SQL片段和XML元素
+
+`foreach`元素可声明的属性有：
+
+- `collection` 要遍历的集合的参数名
+- `item` 声明集合的元素的参数名称
+- `index` 声明集合的索引（用于List或Set等）或键（用于Map）的参数名称
+- `open` 声明SQL片段的前缀
+- `close` 声明SQL片段的后缀
+- `separator` 每次分隔需要的字符串
+- `nullable` 集合参数是否可为`null`，如果值为`false`，集合参数为`null`时将抛出异常，默认值为`false`
+
+当集合参数为空集合时，`open`和`close`也将被忽略
+
+当遍历到某元素时该次SQL片段为空，`foreach`会自动处理可能多余的`separator`
+
+示例：
+
+```xml
+<select id="getUsersInNames" resultType="com.example.entity.User">
+    select id, name, phone_number as phoneNumber from user
+    <where>
+        <foreach collection="names" item="name" index="i" open="name in (" close=")" separator="," nullable="true">
+            #{name}
+        </foreach>
+    </where>
+</select>
+```
+
+`foreach`不会处理值为`null`的集合元素，因此上述示例若需处理`null`集合元素可参考如下写法：
+
+```xml
+<foreach collection="names" item="name" index="i" open="name in (" close=")" separator="," nullable="true">
+    <if test="name != null">#{name}</if>
+</foreach>
 ```
 
 
@@ -3188,13 +3370,25 @@ MyBatis通过`id`元素唯一地索引外层对象，这可以提高索引性能
 
 默认的自动映射等级为`PARTIAL`，不推荐使用`FULL`等级的自动映射，因为这通常容易导致预期之外的映射
 
-因此最佳实践是使用全局`auto-mapping-behavior=NONE`禁用自动映射，在SQL中显式声明所有返回列，在`resultMap`中显式声明结果集所有列与属性之间的映射
+因此最佳实践是在SQL中显式声明所有返回列，在`resultMap`中显式声明结果集所有列与属性之间的映射
 
 自动映射的详细特性此处不做展开
 
 ##### 最佳实践
 
 一次性编写复杂的`resultMap`是不可取的，这是因为MyBatis特性众多，且XML的形式易发生意料之外的、未定义的、或令人难以理解的异常，结合单元测试，从一个尽可能简单的`resultMap`出发逐步嵌套扩展成完整的`resultMap`更符合实际
+
+
+
+#### 配置
+
+==TODO 空的章节==
+
+
+
+#### 日志
+
+==TODO 空的章节==
 
 
 
@@ -3205,6 +3399,28 @@ MyBatis通过`id`元素唯一地索引外层对象，这可以提高索引性能
 https://mybatis.org/mybatis-3/zh_CN/sqlmap-xml.html
 
 
+
+#### 多数据库支持
+
+==TODO 空的章节==
+
+
+
+#### Java API
+
+==TODO 空的章节==
+
+
+
+#### SQL生成器
+
+==TODO 空的章节==
+
+
+
+#### 脚本语言支持
+
+==TODO 空的章节==
 
 
 
@@ -3217,6 +3433,22 @@ https://mybatis.org/mybatis-3/zh_CN/sqlmap-xml.html
 
 
 ### BeanUtils
+
+==TODO 空的章节==
+
+
+
+
+
+### OGNL
+
+==TODO 空的章节==
+
+
+
+
+
+### SpEL
 
 ==TODO 空的章节==
 
