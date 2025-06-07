@@ -1082,7 +1082,7 @@ IoC容器中定义Bean需要如下信息：
 
 - Bean类名
 - Bean名称
-- Bean作用范围
+- Bean作用域
 - 依赖注入的构造函数
 - 依赖注入的属性
 - 自动装配模式
@@ -1161,11 +1161,13 @@ public static void main(String[] args) {
 Bean可通过多种方式描述的元数据来定义，如XML配置、Java注解、Java代码、Groovy等，在IoC容器中，配置的元数据定义被表示为`BeanDefinition`对象，以用于存储Bean的定义信息：
 
 - Bean的全限定名
-- Bean的行为配置（如作用范围、生命周期回调等）
+- Bean的行为配置（如作用域、生命周期回调等）
 - Bean对其他Bean的引用信息
 - 其他配置
 
-Bean应当尽可能早的定义并注册，在运行时注册Bean不受官方支持
+IoC容器在创建时会验证每一个Bean的配置，但不一定立即创建Bean
+
+Bean应当尽可能早的定义并注册，在运行时注册Bean不受官方支持，可能引发非预期的行为
 
 如果对已分配的标识符注册Bean将发生Bean的覆盖，不建议对Bean进行覆盖
 
@@ -1248,6 +1250,214 @@ public class HelloWorldFactory {
     }
 }
 ```
+
+##### 依赖注入
+
+依赖注入在这里指通过多种方式为Bean提供或设置其所需的依赖，依赖注入的时机包括：
+
+- 在创建Bean时
+
+  即在构造方法中注入依赖
+
+- 在创建Bean后
+
+  即在Bean实例创建之后通过其他方式注入依赖
+
+由于依赖是由IoC容器提供的，因此依赖注入的位置包括：
+
+- 创建Bean的工厂方法参数
+- Bean的构造方法参数
+- Bean的Setter方法参数
+- Bean的接口方法参数
+- Bean的属性
+
+其中注入的依赖包括：
+
+- 其他Bean
+- 直接值
+
+###### 基于构造方法
+
+使用`bean`的子元素`constructor-arg`按顺序声明各个构造方法参数所需的依赖，对于Bean依赖使用`ref`属性引用Bean名称，对于值依赖使用`value`声明值
+
+可以使用`index`属性按索引声明参数依赖（从0开始），或使用`name`属性按名称声明参数依赖
+
+示例：
+
+```xml
+<bean id="stringProvider" class="com.example.StringProvider">
+    <constructor-arg value="Hello World"/>
+</bean>
+<bean id="stringPrinter" class="com.example.StringPrinter">
+    <constructor-arg name="stringProvider" ref="stringProvider"/>
+    <constructor-arg name="defaultString" value="Default String"/>
+</bean>
+```
+
+```java
+public class StringProvider {
+    private String value;
+    public StringProvider(String value) {
+        this.value = value;
+    }
+}
+```
+
+```java
+public class StringPrinter {
+    private String defaultString;
+    private StringProvider stringProvider;
+    public StringPrinter(StringProvider stringProvider, String defaultString) {
+        this.defaultString = defaultString;
+        this.stringProvider = stringProvider;
+    }
+}
+```
+
+对于静态工厂方法和实例工厂方法，用法类似
+
+静态工厂方法示例：
+
+```xml
+<bean id="stringPrinter" class="com.example.HelloWorldFactory" factory-method="getStringPrinter">
+    <constructor-arg name="stringProvider" ref="stringProvider"/>
+    <constructor-arg name="defaultString" value="Default String"/>
+</bean>
+```
+
+```java
+public static StringPrinter getStringPrinter(StringProvider stringProvider, String defaultString) {
+    return new StringPrinter(stringProvider, defaultString);
+}
+```
+
+实例工厂方法示例：
+
+```xml
+<bean id="stringPrinter" factory-bean="helloWorldFactory" factory-method="getStringPrinterInstance">
+    <constructor-arg name="stringProvider" ref="stringProvider"/>
+    <constructor-arg name="defaultString" value="Default String"/>
+</bean>
+```
+
+```java
+public StringPrinter getStringPrinterInstance(StringProvider stringProvider, String defaultString) {
+    return new StringPrinter(stringProvider, defaultString);
+}
+```
+
+###### 基于Setter
+
+使用`bean`的子元素`property`声明需要注入依赖的属性名，IoC容器将通过调用其Setter方法注入依赖
+
+示例：
+
+```xml
+<bean id="helloWorldPrinter" class="com.example.HelloWorldPrinter">
+    <property name="message" value="Hello World"/>
+    <property name="stringProvider" ref="stringProvider"/>
+</bean>
+```
+
+```java
+public class HelloWorldPrinter {
+    private String message;
+    private StringProvider stringProvider;
+    public void setMessage(String message) {
+        this.message = message;
+    }
+    public void setStringProvider(StringProvider stringProvider) {
+        this.stringProvider = stringProvider;
+    }
+}
+```
+
+##### 显式依赖声明
+
+如果一个Bean的创建间接依赖另一个Bean，如依赖另一个Bean在初始化时建立的连接、生成的文件、注册的服务等等，可通过显式声明Bean之间的依赖，以调整Bean创建的顺序
+
+使用`depends-on`属性声明一个Bean对一个或多个Bean的依赖，使用`,`、`;`或空格分隔
+
+如果声明了对原型Bean的依赖，那么这些原先Bean的实例将被创建
+
+##### 懒加载
+
+默认情况下，对于单例Bean，IoC容器会在创建时创建这些Bean，如果需要使用懒加载功能，即在需使用该Bean时才创建Bean，可以通过`lazy-init`属性进行控制
+
+如果一个非懒加载的Bean直接或间接依赖了懒加载的Bean，那么该Bean的懒加载功能将失效
+
+```xml
+<bean id="bean" class="com.example.Bean" lazy-init="true"/>
+```
+
+##### Bean的作用域
+
+Bean的作用域包括：
+
+- `singleton` 单例
+
+  默认的作用域，使得该Bean在一个IoC容器中仅有一个实例
+
+- `prototype` 原型
+
+  该Bean可以有任意个实例
+
+此外，在Web上下文，Bean还可以声明的作用域有：
+
+- `request` 请求
+- `session` 会话
+- `application` 应用
+- `websocket` WebSocket
+
+另外，也可通过自定义作用域来实现特别的功能
+
+声明为原型的Bean在每次请求Bean实例时都将创建一个新的实例，且这类Bean的生命周期不完全由IoC容器管理
+
+如下示例将输出`false`：
+
+```xml
+<bean id="beanA" class="com.example.BeanA" scope="prototype"/>
+<bean id="beanB" class="com.example.BeanB">
+    <constructor-arg ref="beanA"/>
+    <property name="beanA" ref="beanA"/>
+</bean>
+```
+
+```java
+public class BeanB {
+    private BeanA beanA1;
+    private BeanA beanA2;
+    public void setBeanA(BeanA beanA) {
+        this.beanA1 = beanA;
+    }
+    public BeanB(BeanA beanA) {
+        this.beanA2 = beanA;
+    }
+    public void helloWorld() {
+        System.out.println(beanA1 == beanA2);
+    }
+}
+```
+
+
+
+##### 自动装配
+
+使用`autowire`属性可以配置自动装配模式，以用于自动地通过属性名/属性类型/构造方法参数查找依赖并注入
+
+##### 查找方法注入
+
+如果一个单例Bean需要获取多个原型Bean，可以使用查找方法注入
+
+使用`lookup-method`指定Bean的一个方法（可以是抽象方法）和该方法应返回的Bean，IoC容器将通过动态生成子类的技术覆写或实现该方法，使得该方法在每次调用时可获取指定的Bean
+
+##### 方法替换
+
+可以使Bean的任意方法的实现被替换
+
+通过`replaced-method`指定Bean的一个方法和替换者，使得该Bean的该方法的执行实际由替换者完成
+
+替换者应实现`MethodReplacer`接口，并声明为Bean
 
 
 
