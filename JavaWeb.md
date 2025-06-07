@@ -994,6 +994,265 @@ Tomcat支持的其他常用功能包括：
 
 
 
+### Spring Framework 入门
+
+
+
+#### 概述
+
+==TODO==
+
+##### 支持
+
+从Spring Framework 6.0起支持：
+
+- Servlet  5.0+
+- JPA 3.0+
+- Tomcat 10
+- Jetty 11
+- Undertow 2.3
+- Hibernate ORM 6.1
+
+等等
+
+
+
+#### 理论与概念
+
+##### IoC与DI
+
+IoC（Inversion of Control）控制反转是一种宽泛的**设计原则**，起源于“好莱坞原则”（"Don't call us, we'll call you"），其核心思想已经过广泛且长时间的发展与实践。
+
+IoC的核心思想是**反转传统的控制流**，即将程序的控制权从自身转移到外部。这种思想广泛应用于各类框架，在传统的控制流中，开发者编写的业务代码作为应用程序的高层模块，通过调用框架或库的底层模块实现相关功能。而在反转的控制流中，框架的底层模块主导应用程序，控制开发者的业务代码的执行。这种控制反转常见于GUI框架，开发者往往仅需针对特定的GUI事件编写业务代码，而应用程序的生命周期和状态转换由框架控制。
+
+IoC反转的控制流包括：
+
+- 对象的创建与销毁
+- 组件之间依赖关系的组装
+- 组件生命周期的管理
+
+等等
+
+在Spring的情景下，IoC主要指对对象的创建的流程进行控制反转。
+
+Martin Fowler在2004年的一篇文章[Inversion of Control Containers and the Dependency Injection pattern](https://martinfowler.com/articles/injection.html)对IoC进行了总结并命名推广，并提出DI是实现IoC的设计模式之一。
+
+DI（Dependency Injection）依赖注入是实现IoC的其中一种**设计模式**，其核心机制是通过外部的装配器（Assembler）对组件之间的依赖关系进行组装：
+
+- 组件不自行创建所需依赖的对象
+- 组件将所需的依赖声明为接口类型的字段
+- 依赖需实现接口
+- 装配器创建并管理依赖对象
+- 装配器查找依赖并通过多种方式将依赖注入到组件的字段中
+
+其中注入方式包括：
+
+- 构造器注入
+- Setter注入
+- 接口注入
+- 字段注入
+
+这使得组件不需要依赖特定的实现类，也不需要管理依赖的生命周期，且面向接口使得依赖可以被简单的更换而无需大量地更改代码，极大地降低了组件之间的耦合并提高了代码的可维护性。Martin Fowler将这类组件称为“插件”，即编译时组件不直接链接到依赖的组件，依赖的组件对象仅在运行时才明确。
+
+DI不是实现IoC的唯一设计模式，Service Locator也是其中之一，其与DI类似同样需要一个外部组件创建并管理依赖对象，与DI不同的是，组件需要显式地调用Locator以获取依赖对象。
+
+##### Bean
+
+需区分术语JavaBeans和Spring情景下的Bean
+
+JavaBeans是Java标准规范之一，由[《JavaBeans Specification》](https://www.oracle.com/java/technologies/javase/javabeans-spec.html)定义，JavaBeans即遵循该规范的Java类或其实例对象，目的是创建可重用、可操作的软件组件，以用于：
+
+- 可以以标准方式访问JavaBeans的属性、行为
+- 可以以标准的、可预测的方式序列化或反序列化JavaBeans对象
+
+等
+
+其核心规范包括：
+
+- 类的属性应是私有的
+- 提供规范命名的Getter和Setter方法
+- 必须有无参公共构造函数
+- 应可序列化
+
+等等
+
+Spring情景下的Bean概指在Spring IoC容器中创建、管理的对象实例，其扩展了JavaBeans的定义，不严格要求遵循JavaBeans规范
+
+IoC容器中定义Bean需要如下信息：
+
+- Bean类名
+- Bean名称
+- Bean作用范围
+- 依赖注入的构造函数
+- 依赖注入的属性
+- 自动装配模式
+- 初始化方法回调
+- 延迟初始化模式
+- 销毁方法回调
+
+等等
+
+
+
+#### IoC容器与Bean
+
+##### 概述
+
+==TODO==
+
+##### Hello World
+
+创建Maven项目，引入`spring-context`依赖项
+
+```xml
+<dependencies>
+    <dependency>
+        <groupId>org.springframework</groupId>
+        <artifactId>spring-context</artifactId>
+        <version>6.2.6</version>
+    </dependency>
+</dependencies>
+```
+
+编写作为Bean的类
+
+```java
+public class HelloWorld {
+    
+    private String helloWorld="Hello World!";
+    
+    public void setHelloWorld(String helloWorld) {
+        this.helloWorld = helloWorld;
+    }
+    
+    public void helloWorld() {
+        System.out.println(helloWorld);
+    }
+    
+}
+```
+
+在`src/main/resources`目录下创建XML文件，并声明Bean
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+		https://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <bean id="helloWorld" class="com.example.HelloWorld"/>
+
+</beans>
+```
+
+编写入口方法，以XML文件名为参数实例化`ApplicationContext`的子类`ClassPathXMLApplicationContext`，并获取Bean对象
+
+```java
+public static void main(String[] args) {
+    ApplicationContext context = new ClassPathXmlApplicationContext("beans.xml");
+    HelloWorld helloWorld = (HelloWorld) context.getBean("helloWorld");
+    helloWorld.helloWorld();
+}
+```
+
+##### Bean定义
+
+Bean可通过多种方式描述的元数据来定义，如XML配置、Java注解、Java代码、Groovy等，在IoC容器中，配置的元数据定义被表示为`BeanDefinition`对象，以用于存储Bean的定义信息：
+
+- Bean的全限定名
+- Bean的行为配置（如作用范围、生命周期回调等）
+- Bean对其他Bean的引用信息
+- 其他配置
+
+Bean应当尽可能早的定义并注册，在运行时注册Bean不受官方支持
+
+如果对已分配的标识符注册Bean将发生Bean的覆盖，不建议对Bean进行覆盖
+
+##### Bean命名
+
+约定Bean以小驼峰式命名，在默认情况下，Bean的名称为小驼峰式的类名
+
+通过`id`为Bean声明一个唯一的名称，也可通过`name`为Bean声明一个或多个别名（以`,`或`;`符号分隔）
+
+示例：
+
+```xml
+<bean id="helloWorld" name="helloWorld2,helloWorld3" class="com.example.HelloWorld"/>
+```
+
+```java
+HelloWorld helloWorld = (HelloWorld) context.getBean("helloWorld3");
+```
+
+##### Bean的实例化
+
+###### 构造方法
+
+IoC容器默认使用Bean的构造方法来实例化Bean，使用`class`指定Bean的类，默认使用无参的构造方法，如果需要使用有参数的构造方法需另行配置
+
+```xml
+<bean id="helloWorld" class="com.example.HelloWorld"/>
+```
+
+```java
+public class HelloWorld {
+    public void helloWorld() {
+        System.out.println("Hello World!");
+    }
+    public HelloWorld() {
+        System.out.println("Hello World Constructor");
+    }
+}
+```
+
+###### 静态工厂方法
+
+可以使用静态工厂方法来选择或自定义Bean的初始化，使用`class`指定工厂类，`factory-method`指定静态方法，工厂类可以不是Bean的类型本身
+
+对于单例Bean，该静态工厂方法只会被调用一次
+
+示例：
+
+```xml
+<bean id="helloWorld" class="com.example.HelloWorldFactory" factory-method="getHelloWorld"/>
+```
+
+```java
+public class HelloWorldFactory {
+    public static HelloWorld getHelloWorld() {
+        return new HelloWorld();
+    }
+}
+```
+
+###### 实例工厂方法
+
+可使用实例化的工厂类的工厂方法来选择或自定义Bean的初始化，需要将对应的工厂声明为Bean，
+
+不声明`class`，使用`factory-bean`指定本级或父级、祖先IoC容器中的工厂Bean的名称，使用`factory-method`指定工厂方法
+
+对于单例Bean，该实例工厂方法只会被调用一次
+
+示例：
+
+```xml
+<bean id="helloWorldFactory" class="com.example.HelloWorldFactory"/>
+<bean id="helloWorld" factory-bean="helloWorldFactory" factory-method="getHelloWorldInstance"/>
+```
+
+```java
+public class HelloWorldFactory {
+    public HelloWorld getHelloWorldInstance(){
+        return new HelloWorld();
+    }
+}
+```
+
+
+
+
+
 ### Spring MVC 入门
 
 <u>知其然</u>
