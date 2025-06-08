@@ -1092,13 +1092,32 @@ IoC容器中定义Bean需要如下信息：
 
 等等
 
+##### IoC容器
+
+Spring中的IoC容器是负责创建、组装、管理Bean的容器，且它们都实现了`BeanFactory`或`ApplicationContext`接口
+
+`BeanFactory`是最基本的容器接口，提供了Bean的创建、依赖注入、获取等基本功能
+
+`ApplicationContext`继承了`BeanFactory`，提供了更多的容器功能，如多种Bean定义配置加载方式、Bean的急加载、事件机制、资源访问、国际化、丰富的注解支持、MVC等环境的集成扩展、多层级容器支持、AOP功能支持等等
+
+为了使IoC容器能够对Bean进行管理，需要通过配置的形式定义Bean的元数据以注册到IoC容器，元数据配置的形式包括：
+
+- XML配置文件
+- Java注解
+- Java代码
+- Groovy脚本
+
+等
+
+通过不同的`ApplicationContext`的实现类来加载不同形式的配置元数据并初始化IoC容器，如`ClassPathXmlApplicationContext`、`AnnotationConfigApplicationContext`、`GenericGroovyApplicationContext`等等
 
 
-#### IoC容器与Bean
+
+#### IoC初步认识
 
 ##### 概述
 
-==TODO==
+通过原生的XML配置文件定义Bean元数据的形式来使用IoC容器，以初步认识IoC容器的基本功能
 
 ##### Hello World
 
@@ -1439,7 +1458,17 @@ public class BeanB {
 }
 ```
 
+##### Bean的生命周期
 
+可以通过让Bean实现`InitializingBean`或`DisposableBean`接口来让IoC容器调用生命周期回调方法
+
+也可以使用`bean`元素的`init-method`或`destroy-method`属性指定生命周期回调方法
+
+如果Bean实现了`Closeable`或`AutoCloseable`接口，其`close`方法也会作为生命周期回调方法
+
+一般的，简单地创建IoC容器不会使的其中的Bean的销毁方法自动被调用，这是因为IoC容器默认不会自行销毁，可以通过手动销毁IoC容器来实现Bean的销毁
+
+原型Bean的销毁方法不受IoC容器管理，需要手动调用
 
 ##### 自动装配
 
@@ -1459,7 +1488,9 @@ public class BeanB {
 
 替换者应实现`MethodReplacer`接口，并声明为Bean
 
+##### 注解驱动
 
+即使是使用`ClassPathXmlApplicationContext`加载XML配置文件以初始化IoC容器，该容器也同样可支持注解驱动的Bean定义，在`bean`元素中声明`context:annotation-config`和`context:component-scan`等子元素即可启用注解驱动的相关功能
 
 
 
