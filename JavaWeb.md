@@ -1081,14 +1081,34 @@ Spring情景下的Bean概指在Spring IoC容器中创建、管理的对象实例
 IoC容器中定义Bean需要如下信息：
 
 - Bean类名
+
+  IoC容器实际提供的Bean实例的类型可能是Bean定义的类型的任意子类
+
 - Bean名称
+
+  用于唯一的标识Bean
+
 - Bean作用域
+
+  通常用于控制Bean是否为单例，也用于控制Bean的生命周期
+
 - 依赖注入的构造函数
+
 - 依赖注入的属性
+
 - 自动装配模式
+
 - 初始化方法回调
+
+  作为生命周期回调函数
+
 - 延迟初始化模式
+
+  用于控制Bean的懒加载
+
 - 销毁方法回调
+
+  作为生命周期回调函数
 
 等等
 
@@ -1175,7 +1195,7 @@ public static void main(String[] args) {
 }
 ```
 
-##### Bean定义
+##### Bean的定义
 
 Bean可通过多种方式描述的元数据来定义，如XML配置、Java注解、Java代码、Groovy等，在IoC容器中，配置的元数据定义被表示为`BeanDefinition`对象，以用于存储Bean的定义信息：
 
@@ -1190,7 +1210,7 @@ Bean应当尽可能早的定义并注册，在运行时注册Bean不受官方支
 
 如果对已分配的标识符注册Bean将发生Bean的覆盖，不建议对Bean进行覆盖
 
-##### Bean命名
+##### Bean的命名
 
 约定Bean以小驼峰式命名，在默认情况下，Bean的名称为小驼峰式的类名
 
@@ -1491,6 +1511,316 @@ public class BeanB {
 ##### 注解驱动
 
 即使是使用`ClassPathXmlApplicationContext`加载XML配置文件以初始化IoC容器，该容器也同样可支持注解驱动的Bean定义，在`bean`元素中声明`context:annotation-config`和`context:component-scan`等子元素即可启用注解驱动的相关功能
+
+
+
+#### IoC入门
+
+##### 概述
+
+Spring Framework支持基于注解和Java代码驱动的IoC容器和Bean的声明与配置，IoC容器将通过读取注解元数据以生成Bean定义
+
+一般的，通过Spring Framework提供的注解和API可以实现IoC容器与Bean的配置，如果需要进一步解耦以去除对Spring Framework的耦合，可以参考规范`JSR-250: Common Annotations for the Java Platform`和`JSR-330: Dependency Injection for Java`，Spring Framework对这些规范提供了一定程度的支持
+
+引入依赖`jakarta.annotation:jakarta.annotation-api`（Jakarta 9，以用于Spring Framework 6）以支持`JSR-250`，以及依赖`jakarta.inject:jakarta.inject-api`（Jakarta 9，以用于Spring Framework 6）以支持`JSR-330`
+
+特别的，Spring Boot 3以预先提供了上述两个依赖
+
+##### Hello World
+
+创建Maven项目，引入`spring-context`依赖项
+
+```xml
+<dependencies>
+    <dependency>
+        <groupId>org.springframework</groupId>
+        <artifactId>spring-context</artifactId>
+        <version>6.2.6</version>
+    </dependency>
+</dependencies>
+```
+
+编写作为Bean的类
+
+```java
+public class HelloWorld {
+    
+    private String helloWorld="Hello World!";
+    
+    public void setHelloWorld(String helloWorld) {
+        this.helloWorld = helloWorld;
+    }
+    
+    public void helloWorld() {
+        System.out.println(helloWorld);
+    }
+    
+}
+```
+
+编写配置类，代替XML配置，注意Bean类应声明到对应的包或子包中
+
+```java
+@Configuration
+@ComponentScan("com.example.beans")
+public class BeanConfig {
+}
+```
+
+编写入口方法，以配置类为参数实例化`ApplicationContext`的子类`AnnotationConfigApplicationContext`，并获取Bean对象
+
+```java
+public static void main(String[] args) {
+    AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(BeanConfig.class);
+    HelloWorld helloWorld = (HelloWorld) context.getBean("helloWorld");
+    helloWorld.helloWorld();
+}
+```
+
+##### Bean的声明
+
+###### @Component
+
+在类上声明`@Component`及其衍生注解，以将该类声明为Bean
+
+`@Component`及其衍生注解包括：
+
+- `@Component` 将该类声明为Bean
+- `@Configuration` 将该类声明定义和配置其他Bean的Bean
+- `@Controller` 将该类声明为Web MVC三层架构中的控制层组件
+- `@Service` 将该类声明为Web MVC三层架构中的业务层组件
+- `@Repository` 将该类声明为Web MVC三层架构中的数据层组件
+
+等
+
+声明后，该Bean可通过Bean扫描注册到IoC容器
+
+示例：
+
+```java
+@Component("helloWorld")
+public class HelloWorld {
+}
+```
+
+###### @Bean
+
+在任意Bean的静态或成员方法上声明，以将该方法声明为Bean的来源
+
+一般的，建议在`@Configuration`所标注的类中的非静态方法上进行声明
+
+示例：
+
+```java
+@Component
+public class CommonFactory {
+    @Bean
+    public static HelloWorldPrinter helloWorldPrinter(HelloWorld helloWorld) {
+        return new HelloWorldPrinterImpl(helloWorld);
+    }
+}
+```
+
+```java
+@Configuration
+public class CommonFactory {
+    @Bean
+    public HelloWorldPrinter helloWorldPrinter(HelloWorld helloWorld) {
+        return new HelloWorldPrinterImpl(helloWorld);
+    }
+}
+```
+
+##### Bean的命名
+
+默认情况下，由`@Component`声明的Bean的名称为小驼峰式的类名，由`@Bean`声明的Bean的名称为方法名
+
+使用`@Component`的`value`属性为Bean声明自定义的名称
+
+```java
+@Component("helloWorld")
+```
+
+```java
+@Configuration("beanConfig")
+```
+
+使用`@Bean`的`name`或`value`属性为Bean声明一个或多个名称
+
+当`name`或`value`的值为多个时，除第一个值以外，其他的都是别名
+
+```java
+@Bean("helloWorldPrinter")
+```
+
+```java
+@Bean({"helloWorldPrinter","helloWorld"})
+```
+
+##### Bean的作用域
+
+使用`@Scope`的`value`或`scopeName`属性为通过`@Component`或`@Bean`声明的Bean声明作用域，默认值为`singleton`
+
+```java
+@Component
+@Scope("prototype")
+public class HelloWorld {
+}
+```
+
+```java
+@Bean("helloWorldPrinter")
+@Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
+public HelloWorldPrinter getHelloWorldPrinter(HelloWorld helloWorld) {
+    return new HelloWorldPrinterImpl(helloWorld);
+}
+```
+
+##### Bean的生命周期
+
+Bean的默认的生命周期回调方法有两类：
+
+- 在Bean实例化并完成依赖注入后的回调
+- 在Bean销毁前的回调
+
+该章节中所阐述的较多特性，仅局限于Spring Framework 6，对于较高或较低版本，特性可能不同，为了避开这些可能引发非预期行为的特性，强烈建议在一个Bean中仅运用一种生命周期回调的声明方式
+
+###### @Component
+
+对于使用`@Component`声明的Bean，可以通过实现`InitializingBean.afterPropertiesSet`或`DisposableBean.destroy`接口方法以设置生命周期回调，或使用`JSR-250`规范注解`@PostConstruct`或`@PreDestroy`标注方法以设置生命周期回调
+
+当该Bean实现了`AutoCloseable`或`Closeable`接口且未实现`DisposableBean`接口时，`close`方法将作为`DisposableBean.destroy`的替代，如果实现了`DisposableBean`接口，`close`方法不会被自动调用
+
+示例：
+
+```java
+@Component()
+public class HelloWorld implements InitializingBean, DisposableBean {
+    @PostConstruct
+    public void init() {
+    }
+    @PreDestroy
+    public void release() {
+    }
+    @Override
+    public void afterPropertiesSet() throws Exception {
+    }
+    @Override
+    public void destroy() throws Exception {
+    }
+}
+```
+
+上述代码等效于：
+
+```java
+@Component()
+public class HelloWorld implements InitializingBean, AutoCloseable {
+    
+    @PostConstruct
+    public void init() {
+    }
+    @PreDestroy
+    public void release() {
+    }
+    
+    @Override
+    public void afterPropertiesSet() throws Exception {
+    }
+    @Override
+    public void close() throws Exception {
+    }
+    
+}
+```
+
+生命周期回调方法的调用存在顺序：
+
+1. `@PostConstruct`和`@PreDestroy`标注的方法
+2. `InitializingBean`和`DisposableBean`/`AutoCloseable`接口方法
+
+###### @Bean
+
+对于使用`@Bean`声明的Bean，实际声明的生命周期回调由`@Bean`所标注的方法的实际返回值类型决定，即使其声明的返回值类型中未声明生命周期回调也不影响生命周期回调的执行
+
+可以通过实现`InitializingBean.afterPropertiesSet`或`DisposableBean.destroy`接口方法以设置生命周期回调，或使用`JSR-250`规范注解`@PostConstruct`或`@PreDestroy`标注方法以设置生命周期回调
+
+可以使用`@Bean`的`initMethod`和`destroyMethod`属性通过名称来指定生命周期回调，如果值为空字符串，则认为未指定生命周期回调
+
+其中`@Bean.initMethod`的默认值为空字符串，`@Bean.destroyMethod`的默认值为`(inferred)`，这意味着IoC容器将通过名称识别公共无参数的`close`或`shutdown`方法作为生命周期回调，特别的，如果该Bean的实例实现了`DisposableBean`接口，那么这一名称识别将失效，将`@Bean.destroyMethod`声明为空字符串或其他方法名称也可禁用这一行为
+
+当`@Bean.destroyMethod`的值`(inferred)`时且Bean实例中同时存在公共无参数的`close`和`shutdown`方法时，仅有`close`作为生命周期回调
+
+生命周期回调方法的调用存在顺序：
+
+1. `@PostConstruct`和`@PreDestroy`标注的方法
+2. `InitializingBean.afterPropertiesSet`和`DisposableBean.destroy`/(当`@Bean.destroyMethod`的值`(inferred)`时)公共无参`close`或`shutdown`方法
+3. `@Bean`的`initMethod`和`destroyMethod`指定的方法
+
+示例：
+
+```java
+@Component
+public class CommonFactory {
+    
+    @Bean(
+        value = "helloWorldPrinter", 
+        initMethod = "onInit", 
+        destroyMethod = "onRelease"
+    )
+    public HelloWorldPrinter getHelloWorldPrinter(HelloWorld helloWorld) {
+        return new HelloWorldPrinterImpl(helloWorld);
+    }
+    
+}
+```
+
+```java
+public interface HelloWorldPrinter {
+    void print();
+}
+```
+
+```java
+public class HelloWorldPrinterImpl implements HelloWorldPrinter, InitializingBean, DisposableBean {
+    
+    public void print() {
+    }
+    
+    @PostConstruct
+    public void init(){
+    }
+    @Override
+    public void afterPropertiesSet() throws Exception {
+    }
+    public void onInit(){
+    }
+    
+    @PreDestroy
+    public void release(){
+    }
+    @Override
+    public void destroy() throws Exception {
+    }
+    public void onRelease(){
+    }
+    
+}
+```
+
+###### 注意事项
+
+==TODO==
+
+##### Bean的扫描
+
+##### Bean的配置
+
+##### Bean的获取
+
+
+
+##### IoC的管理
 
 
 
