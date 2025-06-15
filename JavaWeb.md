@@ -1810,7 +1810,7 @@ public class HelloWorldPrinterImpl implements HelloWorldPrinter, InitializingBea
 
 ###### 注意事项
 
-==TODO==
+==TODO 锁、依赖注入中的生命周期、循环依赖中的生命周期等等==
 
 ##### Bean的懒加载
 
@@ -1916,15 +1916,182 @@ public class FoobarBeanConfig {
 
 `@ComponentScans`相当于声明多个`@ComponentScan`，此处不做展开
 
-==TODO `@ComponentScans` `@Import` 和Context初始导入或扫描==
+==TODO `@ComponentScans`  和Context初始导入或扫描==
 
-##### Bean的配置
+##### Bean的导入
+
+可以在任意`@Component`（通常应是`@Configuration`）Bean上声明注解`@Import`，通过指定全限定名对任意类进行导入，使其作为Bean注册到IoC容器
+
+使用`@Import`的`value`属性声明一个或多个导入的类
+
+示例：
+
+```java
+@Component
+@Import({BeanConfig.class, Foobar.class})
+public class Helloworld {
+}
+```
+
+```java
+@Component
+public class Foobar {
+}
+```
+
+`@Import`注解相当于针对性的`@ComponentScan`，且与`@ComponentScan`不同的是，`@Import`的目标类可以未声明`@Component`及其衍生注解，使得`@Import`有更广泛的适用性
+
+即使`@Import`的目标类未声明`@Component`及其衍生注解，目标类上声明的`@ComponentScan`、`@Import`、`@Scope`、`@Lazy`等等注解仍能正常工作，该目标类内声明的Bean生命周期回调、依赖注入等仍能正常工作，因此从易理解的角度，可视为`@Import`注解对目标类声明了`@Component`以作为普通Bean
+
+因此如果`@Import`的目标类未声明`@Component`及其衍生注解，且目标类中声明了`@Bean`方法，该目标类也并不会拥有`@Configuration`Bean的`@Bean`方法拦截功能（关于该方法拦截的详情参考章节Bean的工厂）
+
+以下示例展示了这一特殊用法，但这种情况通常不会发生：
+
+```java
+@Component
+@Import(Foobar.class)
+public class Helloworld {
+}
+```
+
+```java
+@ComponentScan("com.example.foobar")
+@Import({BeanConfig.class, FoobarBeanConfig.class})
+public class Foobar {
+}
+```
+
+一般的，`@Import`的常见用法是在`@Configuration`Bean上声明，以用于代替`@Bean`方法便捷地导入不在已扫描的包中的类以作为Bean，亦或是在`@Configuration`Bean上声明，以导入不在已扫描的包中的其他`@Configuration`Bean以用于扫描或注册更多的Bean
+
+以下示例展示了这一常见用法：
+
+```java
+@Configuration
+@Import({FoobarBeanConfig.class, HelloWorldDataSource.class})
+@ComponentScan("com.example.helloworld")
+public class HelloworldBeanConfig {
+}
+```
+
+```java
+@Configuration
+@ComponentScan("com.example.foobar")
+@Import(FoobarDataSource.class})
+public class FoobarBeanConfig {
+    @Bean
+    public FoobarDataSourceWrapper foobarDataSourceWrapper(FoobarDataSource foobarDataSource) {
+        return new FoobarDataSourceWrapper(foobarDataSource);
+    }
+}
+```
+
+##### Bean的工厂
+
+使用`@Bean`声明的方法应声明到`@Configuration`Bean中，这是因为默认情况下`@Configuration`Bean将被IoC容器通过CGLIB生成动态子类对象来进行代理，以用于与IoC容器协作
+
+在`@Configuration`Bean类中的`@Bean`方法在默认情况下将被拦截，对其的调用相当于从IoC容器中获取指定的Bean
+
+如以下示例中输出结果为`true`：
+
+```java
+@Configuration
+public class FoobarBeanConfig {
+    @Bean("foobar")
+    public Foobar getFoobar(){
+        return new Foobar();
+    }
+}
+```
+
+```java
+public static void main(String[] args) {
+    AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(FoobarBeanConfig.class);
+    Foobar foobar = context.getBean(Foobar.class);
+    System.out.println(foobar == context.getBean(FoobarBeanConfig.class).getFoobar());
+}
+```
+
+这意味着即使该`@Bean`方法被声明为`@Scope("prototype")`，由于对其的调用将被拦截并通过IoC容器，Bean实例的创建流程也将正常进行（如依赖注入、生命周期回调等等）
+
+特别的，受限于技术，由`static`、`private`、`final`声明的`@Bean`方法将不会被拦截，其中`private`、`final`的声明将引发异常
+
+将`@Configuration`的`proxyBeanMethods`属性值声明为`true`可以禁用对`@Configuration`Bean类的动态代理
+
+```java
+@Configuration(proxyBeanMethods = false)
+public class FoobarBeanConfig {
+}
+```
 
 ##### Bean的获取
 
+可以主动从IoC容器中获取Bean
 
+可通过指定Bean的任意名称或别名从IoC容器中获取
+
+示例：
+
+```java
+AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(BeanConfig.class);
+HelloWorld helloWorld = (HelloWorld) context.getBean("helloWorld");
+```
+
+可通过指定Bean实例的类型或任意父祖类型（包括继承的父祖类或实现的父祖接口）来从IoC容器中获取
+
+注意通过类型获取Bean实例时，IoC容器仅关注Bean实例的类型而不是声明的类型
+
+以下示例展示了从IoC容器中通过完全未预先声明的类型获取Bean实例：
+
+```java
+public class Foobar {
+}
+```
+
+```java
+public interface Sub {
+}
+```
+
+```java
+@Component
+public class SubFoobar extends Foobar implements Sub{
+}
+```
+
+```java
+@Configuration
+public class FoobarBeanConfig {
+    @Bean("foobar")
+    public Foobar getFoobar(){
+        return new SubFoobar();
+    }
+}
+```
+
+```java
+public static void main(String[] args) {
+    AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(FoobarBeanConfig.class);
+    Object subFoobar = context.getBean(Sub.class);
+}
+```
+
+当通过指定类型获取Bean实例时，如果有多个候选Bean实例，将发生异常
+
+可通过同时指定Bean的任意名称或别名和类型或任意父祖类型的方式解决
+
+如将上述示例改为：
+
+```java
+Object subFoobar = context.getBean("foobar", Sub.class);
+```
+
+此外，通过调用被代理拦截的工厂方法也可实现由IoC容器获取Bean实例，详情参考章节Bean的获取
+
+一般的，主动获取Bean实例并不是好的实践，因为这将使得代码与Spring Framework耦合，使用依赖注入被动的获取Bean是更好的方式，详情参考依赖注入相关章节
 
 ##### IoC的管理
+
+==TODO==
 
 
 
