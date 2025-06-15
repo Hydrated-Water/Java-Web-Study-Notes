@@ -1419,7 +1419,7 @@ public class HelloWorldPrinter {
 
 如果声明了对原型Bean的依赖，那么这些原先Bean的实例将被创建
 
-##### 懒加载
+##### Bean的懒加载
 
 默认情况下，对于单例Bean，IoC容器会在创建时创建这些Bean，如果需要使用懒加载功能，即在需使用该Bean时才创建Bean，可以通过`lazy-init`属性进行控制
 
@@ -1607,7 +1607,7 @@ public class HelloWorld {
 
 在任意Bean的静态或成员方法上声明，以将该方法声明为Bean的来源
 
-一般的，建议在`@Configuration`所标注的类中的非静态方法上进行声明
+一般的，建议在`@Configuration`所标注的类中的非静态方法上进行声明，这是因为IoC对于这类声明支持更多的特性，详情参见下文
 
 示例：
 
@@ -1812,7 +1812,111 @@ public class HelloWorldPrinterImpl implements HelloWorldPrinter, InitializingBea
 
 ==TODO==
 
+##### Bean的懒加载
+
+可以使用`@Lazy`控制通过`@Component`或`@Bean`声明的单例Bean的懒加载
+
+`@Lazy`的属性`value`值为`true`时将启用该Bean的懒加载，否则将禁用懒加载，默认值为`true`
+
+示例：
+
+```java
+@Component("helloWorld")
+@Lazy
+public class HelloWorld {
+}
+```
+
+```java
+@Bean(value = "helloWorldPrinter")
+@Lazy
+public HelloWorldPrinter getHelloWorldPrinter(HelloWorld helloWorld) {
+    return new HelloWorldPrinterImpl(helloWorld);
+}
+```
+
+特别的，当`@Component`（通常是`@Configuration`）声明的Bean中存在`@Bean`声明时，在类上声明`@Lazy(true)`相当于对该Bean和其所有`@Bean`方法（包括静态方法）声明`@Lazy(true)`，此时通过对特定的`@Bean`声明`@Lazy(false)`将覆盖这一行为
+
+特别的，即使声明为`@Lazy(true)`的`@Component`或`@Configuration`仅有静态`@Bean`方法声明为`@Lazy(false)`，该`@Component`或`@Configuration`的懒加载也将被禁用
+
+示例：
+
+```java
+@Component
+@Lazy
+public class CommonFactory {
+    
+    @Bean(value = "helloWorldPrinter")
+    @Lazy(false)
+    public HelloWorldPrinter getHelloWorldPrinter(HelloWorld helloWorld) {
+        return new HelloWorldPrinterImpl(helloWorld);
+    }
+    
+    @Bean(value = "helloWorldPrinterWithoutHelloWorld")
+    public HelloWorldPrinter getHelloWorldPrinterWithoutHelloWorld() {
+        return new HelloWorldPrinterImpl();
+    }
+    
+}
+```
+
+##### Bean的显式依赖声明
+
+如果一个Bean的创建依赖另一个Bean创建过程中的副作用却不依赖这个Bean对象本身，可以通过`@DependsOn`显式声明依赖
+
+可通过`@DependsOn`的`value`属性通过Bean名称对`@Component`或`@Bean`声明的Bean声明一个或多个依赖
+
+如果声明了对原型Bean的依赖，那么这些原先Bean的实例也将被创建
+
+该依赖声明可导致被依赖的Bean的懒加载失效
+
+示例：
+
+```java
+@Component("helloWorld")
+@DependsOn({"commonFactory", "helloWorldDefinition"})
+public class HelloWorld {
+}
+```
+
+```java
+@Bean(value = "helloWorldPrinter")
+@DependsOn("helloWorldPrinterWithoutHelloWorld")
+public HelloWorldPrinter getHelloWorldPrinter(HelloWorld helloWorld) {
+    return new HelloWorldPrinterImpl(helloWorld);
+}
+```
+
+应避免过多使用这个功能，一个组件依赖隐式地依赖另一个组件的副作用这一行为本身被视为不良实践，更重要的是，`@DependsOn`声明的依赖将被保证更早的创建，这将与其他`@DependsOn`和构造方法注入等依赖声明共同产生更多的循环依赖可能，且这种循环依赖IoC容器将无法自行解除
+
+此外，`@DependsOn`除了影响Bean的创建顺序，也将影响单例Bean的销毁顺序，如果一个单例Bean通过`@DependsOn`声明对一个或多个单例Bean的依赖，那么这个Bean将比这些Bean更早销毁，这与创建的顺序是相反的
+
+当然，原型Bean除外，它们的销毁不受IoC容器的控制
+
 ##### Bean的扫描
+
+可以使用注解`@ComponentScan`对`@Component`的Bean进行声明（通常应声明到`@Configuration`的Bean上），以实现包扫描，将指定的包内的所有`@Component`声明的Bean注册到IoC容器中
+
+使用`@ComponentScan`的`value`或`basePackages`声明一个或多个基本包，如果这些包中的任意`@Component`的Bean通过`@ComponentScan`声明了更多的包，这些包也会被IoC容器扫描
+
+可以在同一个Bean上声明多个`@ComponentScan`注解以声明多个包扫描
+
+```java
+public static void main(String[] args) {
+    AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(FoobarBeanConfig.class);
+}
+```
+
+```java
+@ComponentScan({"com.example.foobar", "com.example.foobar2"})
+@ComponentScan("com.example.foobar3")
+public class FoobarBeanConfig {
+}
+```
+
+`@ComponentScans`相当于声明多个`@ComponentScan`，此处不做展开
+
+==TODO `@ComponentScans` `@Import` 和Context初始导入或扫描==
 
 ##### Bean的配置
 
