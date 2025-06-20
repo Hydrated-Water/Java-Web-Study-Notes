@@ -2025,7 +2025,7 @@ public class FoobarBeanConfig {
 
 ##### Bean的获取
 
-可以主动从IoC容器中获取Bean
+可以主动从IoC容器中获取Bean或被动的由IoC注入Bean实例
 
 可通过指定Bean的任意名称或别名从IoC容器中获取
 
@@ -2085,9 +2085,45 @@ public static void main(String[] args) {
 Object subFoobar = context.getBean("foobar", Sub.class);
 ```
 
-此外，通过调用被代理拦截的工厂方法也可实现由IoC容器获取Bean实例，详情参考章节Bean的获取
+此外，通过调用被代理拦截的工厂方法或调用查找方法也可实现由IoC容器获取Bean实例，详情参考章节Bean的工厂、Bean的查找方法注入
 
 一般的，主动获取Bean实例并不是好的实践，因为这将使得代码与Spring Framework耦合，使用依赖注入被动的获取Bean是更好的方式，详情参考依赖注入相关章节
+
+##### Bean的查找方法注入
+
+在`@Component`声明的Bean中，可通过`@Lookup`注解标注特定的方法，使得IoC容器通过CGLIB生成动态子类对象以覆盖或实现指定的方法，使得该方法的实际作用为从IoC容器中获取指定的Bean实例
+
+示例：
+
+```java
+@Component
+public abstract class Foobar {
+    @Lookup
+    public abstract HelloWorld getHelloWorld();
+}
+```
+
+如果查找方法是抽象方法，那么它会被实现，否则它将被覆盖
+
+不应将查找方法声明为`private`、`static`或`final`，不应在`@Bean`声明的Bean中使用查找方法，否则CGLIB将无法覆盖此方法，`@Lookup`将静默失败
+
+默认情况下调用查找方法时，IoC容器将通过查找方法返回值获取Bean实例，也可以通过`@Lookup`的`value`属性指定Bean的名称
+
+示例：
+
+```java
+@Component
+public abstract class Foobar {
+    @Lookup("helloWorld")
+    public abstract HelloWorld getHelloWorld();
+}
+```
+
+与直接从容器中获取Bean实例类似，查找方法可以适用于查找单例或非单例的Bean实例
+
+##### 依赖注入
+
+==TODO docs.spring.io/spring-framework/reference/core/beans/annotation-config/autowired.html Autowired文档注释==
 
 ##### IoC的管理
 
