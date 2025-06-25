@@ -464,3 +464,148 @@ OpenFeign会代理接口方法，使其通过某种复杂均衡算法，从服�
 各服务通过SpringMVC Interceptor在请求处理前读取请求头并将用户信息保存到ThreadLocal，在请求处理后清除ThreadLocal
 
 当服务间调用时，通过OpenFeign的RequestInterceptor统一的从ThreadLocal读取用户信息写入请求头
+
+考虑到用户可能未登录，实际上服务获取的用户信息可能为空
+
+
+
+
+
+### 配置管理
+
+- 统一配置，去除冗余重复配置数据
+- 配置热更新，无需重启服务
+
+Nacos即具备配置管理功能
+
+![image-20250625202307746](Temp-Cloud笔记图片/image-20250625202307746.png)
+
+在Nacos后台面板汇总进行配置管理，使用Data ID作为配置的限定名
+
+统一或相似的配置抽取为模版用于管理，可变值使用`$`变量
+
+![image-20250625202700920](Temp-Cloud笔记图片/image-20250625202700920.png)
+
+更改传统的SpringBoot配置加载流程
+
+其中bootstrap.yml用于定义Nacos等必须配置，且这些配置将在合并配置流程中被合并到SpringBoot上下文
+
+![image-20250625203128492](Temp-Cloud笔记图片/image-20250625203128492.png)
+
+快速入门
+
+![image-20250625203355207](Temp-Cloud笔记图片/image-20250625203355207.png)
+
+![image-20250625203445899](Temp-Cloud笔记图片/image-20250625203445899.png)
+
+配置热更新
+
+假设某服务名为`foobar`，即使该服务未在`bootstrap.yaml`中声明需要读取的共享配置，但由于在`bootstrap.yaml`中配置了`spring.application.name=foobar`、`profiles.active=pro`、`spring.cloud.nacos.config.file-extension=yaml`，Nacos默认将读取`foobar.yaml`和`foobar-pro.yaml`配置文件
+
+![image-20250625204207996](Temp-Cloud笔记图片/image-20250625204207996.png)
+
+
+
+
+
+### 服务保护
+
+
+
+#### 雪崩问题
+
+微服务调用链路中的某个服务故障，导致其上下游的所有服务不可用，最终导致所有直接或间接关联的服务集体故障
+
+- 服务提供者应尽可能避免故障
+- 服务消费者应尽可能减少下游服务故障对本服务的影响
+
+
+
+#### 保护方案
+
+请求限流
+
+![image-20250625213304132](Temp-Cloud笔记图片/image-20250625213304132.png)
+
+线程隔离
+
+![image-20250625213608890](Temp-Cloud笔记图片/image-20250625213608890.png)
+
+服务熔断
+
+![image-20250625213854032](Temp-Cloud笔记图片/image-20250625213854032.png)
+
+
+
+组件
+
+- Sentinel Spring Cloud Alibaba组件
+- Hystrix Spring Cloud Netflix组件
+
+![image-20250625214136026](Temp-Cloud笔记图片/image-20250625214136026.png)
+
+
+
+#### Sentinel
+
+![image-20250625214413244](Temp-Cloud笔记图片/image-20250625214413244.png)
+
+Sentinel分为控制台服务器和依赖项客户端
+
+控制台服务器是一个Jar文件，启动后在控制台服务器中可以对所有已连接的客户端进行实时流量监控、并设置保护规则
+
+服务配置：
+
+引入依赖项
+
+![image-20250625215031921](Temp-Cloud笔记图片/image-20250625215031921.png)
+
+配置控制台服务器地址
+
+![image-20250625215120177](Temp-Cloud笔记图片/image-20250625215120177.png)
+
+
+
+簇点链路
+
+![image-20250625215430119](Temp-Cloud笔记图片/image-20250625215430119.png)
+
+由于默认监控的是请求路径，考虑到RESTful风格，需要请求方法区分簇点资源
+
+![image-20250625215621902](Temp-Cloud笔记图片/image-20250625215621902.png)
+
+Sentinel是通过实时检测Spring MVC HTTP接口的方式来识别出簇点资源的，如果一个HTTP接口未被调用，那么它将不会被Sentinel监控
+
+OpenFeign接口也将成为簇点资源
+
+
+
+请求限流
+
+![image-20250625220613015](Temp-Cloud笔记图片\image-20250625220613015.png)
+
+
+
+线程隔离
+
+![image-20250625220845565](Temp-Cloud笔记图片/image-20250625220845565.png)
+
+Fallback
+
+当下游服务故障时对其的调用将经由Fallback进行失败降级处理
+
+![image-20250625221337323](Temp-Cloud笔记图片/image-20250625221337323.png)
+
+![image-20250625221444146](Temp-Cloud笔记图片/image-20250625221444146.png)
+
+![image-20250625222127889](Temp-Cloud笔记图片/image-20250625222127889.png)
+
+![image-20250625222155763](Temp-Cloud笔记图片/image-20250625222155763.png)
+
+
+
+服务熔断
+
+![image-20250625222835040](Temp-Cloud笔记图片/image-20250625222835040.png)
+
+![image-20250625223007851](Temp-Cloud笔记图片/image-20250625223007851.png)
