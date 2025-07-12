@@ -1417,7 +1417,7 @@ public class HelloWorldPrinter {
 
 使用`depends-on`属性声明一个Bean对一个或多个Bean的依赖，使用`,`、`;`或空格分隔
 
-如果声明了对原型Bean的依赖，那么这些原先Bean的实例将被创建
+如果声明了对原型Bean的依赖，那么这些原型Bean的实例将被创建
 
 ##### Bean的懒加载
 
@@ -1543,6 +1543,7 @@ Spring Framework支持基于注解和Java代码驱动的IoC容器和Bean的声�
 编写作为Bean的类
 
 ```java
+@Component("helloWorld")
 public class HelloWorld {
     
     private String helloWorld="Hello World!";
@@ -2015,7 +2016,7 @@ public static void main(String[] args) {
 
 特别的，受限于技术，由`static`、`private`、`final`声明的`@Bean`方法将不会被拦截，其中`private`、`final`的声明将引发异常
 
-将`@Configuration`的`proxyBeanMethods`属性值声明为`true`可以禁用对`@Configuration`Bean类的动态代理
+将`@Configuration`的`proxyBeanMethods`属性值声明为`false`可以禁用对`@Configuration`Bean类的动态代理
 
 ```java
 @Configuration(proxyBeanMethods = false)
@@ -2071,7 +2072,7 @@ public class FoobarBeanConfig {
 ```java
 public static void main(String[] args) {
     AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(FoobarBeanConfig.class);
-    Object subFoobar = context.getBean(Sub.class);
+    Sub subFoobar = context.getBean(Sub.class);
 }
 ```
 
@@ -2082,12 +2083,12 @@ public static void main(String[] args) {
 如将上述示例改为：
 
 ```java
-Object subFoobar = context.getBean("foobar", Sub.class);
+Sub subFoobar = context.getBean("foobar", Sub.class);
 ```
 
 此外，通过调用被代理拦截的工厂方法或调用查找方法也可实现由IoC容器获取Bean实例，详情参考章节Bean的工厂、Bean的查找方法注入
 
-一般的，主动获取Bean实例并不是好的实践，因为这将使得代码与Spring Framework耦合，使用依赖注入被动的获取Bean是更好的方式，详情参考依赖注入相关章节
+一般的，通过IoC容器的接口方法主动获取Bean实例并不是好的实践，因为这将使得代码与Spring Framework耦合，使用依赖注入被动的获取Bean是更好的方式，详情参考依赖注入相关章节
 
 ##### Bean的查找方法注入
 
@@ -2194,13 +2195,13 @@ Connection: keep-alive
 使用注解`@RequestMapping`的`method`属性限定匹配一个或多个请求方法，或使用便捷的注解如`@GetMapping`、`@PostMapping`、`@PutMapping`、`@DeleteMapping`等注解实现相同的效果
 
 ```java
-@RequestMapping(value = "/bar2", method = {RequestMethod.GET, RequestMethod.POST})
-public String bar2(@RequestParam(required = false) List<String> info, Account account) {
+@RequestMapping(value = "/bar", method = {RequestMethod.GET, RequestMethod.POST})
+public String bar(@RequestParam(required = false) List<String> info, Account account) {
     return "GET : " + Objects.toString(info) + ":" + Objects.toString(account);
 }
 
-@DeleteMapping(value = "/bar2")
-public String bar21(@RequestParam(required = false) List<String> info, Account account) {
+@DeleteMapping(value = "/bar")
+public String bar(@RequestParam(required = false) List<String> info, Account account) {
     return "DEL : " + Objects.toString(info) + ":" + Objects.toString(account);
 }
 ```
@@ -2450,7 +2451,7 @@ public String foo(@RequestParam MultiValueMap<String, String> params) {
 }
 ```
 
-其中`MultiValueMap<String, String>`本质上是`Map<String, List<String>>`，但Spring MVC默认无法处理`Map<String, List<String>>`、`Map<String, String[]`等类型
+其中`MultiValueMap<String, String>`本质上是`Map<String, List<String>>`，但Spring MVC默认无法处理`Map<String, List<String>>`、`Map<String, String[]>`等类型
 
 `Map`和`MultiValueMap`在接收全部参数时值的类型在绝大多数情况下应为`String`
 
@@ -2550,7 +2551,7 @@ public String bar(@RequestBody User user) {
 
 ###### `MultipartFile`
 
-在处理`multipart/form-data`类型的包含文件部分的表单数据时，常使用`@RequestParam`和`MultipartFile`及其集合类型（即使文件部分数据总在请求体中出现）
+在处理`multipart/form-data`类型的包含文件部分的表单数据时，常使用`@RequestParam`和`MultipartFile`及其集合类型（即使表单文件数据总在请求体中出现）
 
 与`@RequestParam`的使用方法类似，这些集合类型包括`List<MultipartFile>`、`Map<String, MultipartFile>`、`MultiValueMap<String, MultipartFile>`
 
@@ -2879,7 +2880,7 @@ spring.datasource.password=password
 按照表结构声明对应的POJO类，如
 
 ```java
-package com.crim.web.lab.springmvclab.web.entity;
+package com.example.entity;
 
 import lombok.Data;
 
@@ -2915,7 +2916,7 @@ public class City {
 声明Mapper接口，如
 
 ```java
-package com.crim.web.lab.springmvclab.web.mapper;
+package com.example.mapper;
 
 import com.crim.web.lab.springmvclab.web.entity.City;
 import org.apache.ibatis.annotations.Mapper;
@@ -3127,7 +3128,7 @@ INSERT语句如果使用了数据库自动生成主键，可以通过声明`@Opt
 ```java
 @Options(useGeneratedKeys = true, keyProperty = "id")
 @Insert("insert into user(name,phone_number) values(#{name},#{phoneNumber})")
-int insertUser2(User user);
+int insertUser(User user);
 ```
 
 ##### 列名映射
@@ -3195,7 +3196,7 @@ mybatis.configuration.map-underscore-to-camel-case=true
 
 ##### 概述
 
-MyBatis支持在XML文件中声明Mapper类及其方法与SQL语句之间的映射，因此这些XML文件也被成为“XML映射文件”
+MyBatis支持在XML文件中声明Mapper类及其方法与SQL语句之间的映射，因此这些XML文件也被称为“XML映射文件”
 
 在默认配置下，XML映射文件的声明应至少遵循如下规范，否则映射可能失败
 
@@ -3214,7 +3215,7 @@ MyBatis支持在XML文件中声明Mapper类及其方法与SQL语句之间的映�
 
 - XML映射文件的`mapper`根元素应包含`namespace`属性，其值应为所对应的Mapper类的全限定名
 
-- 每个`select`、`update`、`insert`、`delete`标签的`id`属性的值应为所对应的Mapper类方法名，`resultType`应为对应Mapper类方法返回值中一条记录的类型，当返回值为集合时，`resultType`应当是集合的类型而不是集合，具体的声明方式参见下文
+- 每个`select`、`update`、`insert`、`delete`标签的`id`属性的值应为所对应的Mapper类方法名，`resultType`应为对应Mapper类方法返回值中一条记录的类型，当返回值为集合时，`resultType`应当是集合元素的类型而不是集合类型本身，具体的声明方式参见下文
 
 - Mapper中的每一个方法都应该存在映射（即使不在XML映射文件中），但XML映射文件中可以存在冗余的声明
 
@@ -3721,7 +3722,7 @@ User getUserById(Integer id);
 ```xml
 <mapper namespace="com.example.ExampleMapper">
 
-    <resultMap id="cityMap1" type="java.util.HashMap">
+    <resultMap id="cityMap" type="java.util.HashMap">
         <id property="id" column="ID" javaType="Integer"/>
         <result property="name" column="Name" javaType="String"/>
         <result property="country.code" column="CountryCode" javaType="String"/>
@@ -3730,7 +3731,7 @@ User getUserById(Integer id);
         <result property="population" column="Population" javaType="Long"/>
     </resultMap>
 
-    <resultMap id="city1" type="com.example.entity.City">
+    <resultMap id="city" type="com.example.entity.City">
         <id property="id" column="ID"/>
         <result property="name" column="Name"/>
         <result property="country.code" column="CountryCode"/>
@@ -3739,11 +3740,11 @@ User getUserById(Integer id);
         <result property="population" column="Population"/>
     </resultMap>
 
-    <select id="getCityById" resultMap="city1">
+    <select id="getCityById" resultMap="city">
         select * from city where id = #{id}
     </select>
 
-    <select id="getCityMapById" resultMap="cityMap1">
+    <select id="getCityMapById" resultMap="cityMap">
         select * from city where id = #{id}
     </select>
 
@@ -4331,7 +4332,7 @@ MyBatis通过`id`元素唯一地索引外层对象，这可以提高索引性能
 
 - `column` 必须，作为参数传递给目标`select`的结果集列名，如果目标`select`需要多个参数，应使用如`{param1=column1,param2=column2}`的格式
 - `select` 必须，目标`select`元素的`id`
-- `fetchType` 可选，值为`lazy`懒加载或`eager`急加载，详情参见工作原理及优化
+- `fetchType` 可选，值为`lazy`懒加载或`eager`急加载
 
 与`association`的用法几乎一致，不同之处在于`association`所嵌套的目标`select`的结果集应只包含一条记录，而`collection`所嵌套的目标`select`的结果集通常包含多条记录
 
