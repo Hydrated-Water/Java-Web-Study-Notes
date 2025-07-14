@@ -1192,3 +1192,171 @@ https://github.com/rabbitmq/rabbitmq-delayed-message-exchange
 
 
 
+
+
+### 分布式搜索
+
+Elasticsearch（ES）是开源的分布式搜索引擎，基于Apache Lucene搜索引擎库开发，以提供分布式的可水平扩展能力和RESTful接口。
+
+ELK指的是Elasticsearch、Kibana、Logstash、Beats等
+
+![image-20250713161437254](Temp-Cloud笔记图片/image-20250713161437254.png)
+
+Kibana提供了Web控制台以用于管理Elasticsearch，其中包括Dev Tools
+
+ES 8大量更改了API
+
+使用Docker部署单机ES，需要配置：
+
+- 服务名
+- 单点模式
+- 数据卷
+- JVM内存（影响ES运行）
+- 9200端口（RESTful）
+- 9300端口（集群通信）
+
+使用Docker部署Kibana，需要配置：
+
+- 服务名
+- ES地址
+- 5601端口（Web控制台）
+
+
+
+#### 理论概念
+
+##### 倒排索引
+
+![image-20250713163408065](Temp-Cloud笔记图片/image-20250713163408065.png)
+
+##### IK分词器
+
+由国人开发的开源中文语义分词器，开源社区基于IK分词器开发了ES插件
+
+于2012年停止维护，但至今仍在使用
+
+https://github.com/infinilabs/analysis-ik
+
+分词接口
+
+```http
+POST /_analyze
+{
+	"analyzer": "standard",
+	"text": "被分词的文本text"
+}
+```
+
+standard模式会将中文按字分词
+
+ik_smart模式会将中文按语义分词
+
+ik_max_word模式会将中文的词按语义和不同细粒度大小重复分词
+
+IK分词器依赖词典来对中文进行分词，词典可在`es-plugins/data/ik/config/IKAnalyzer.xml`中配置
+
+IK分词器可配置停止词典，以用于去除无语义词汇或敏感词
+
+##### 结构
+
+ES将文档以JSON的形式存储，通过JSON形式的动态查询语言（DSL）进行查询
+
+![image-20250713170216471](Temp-Cloud笔记图片/image-20250713170216471.png)
+
+##### 映射
+
+![image-20250713183641009](Temp-Cloud笔记图片/image-20250713183641009.png)
+
+type可以是单一值或数组的类型
+
+索引包括倒排索引
+
+通常只需要对text类型声明分词器
+
+子字段用于type为object的情况
+
+![image-20250713200323294](Temp-Cloud笔记图片/image-20250713200323294.png)
+
+在建立映射时需要考虑的字段包括参与搜索、参与排序和展示的字段
+
+##### 索引
+
+查询索引
+
+GET /索引名称
+
+删除索引
+
+DELETE /索引名称
+
+新增索引
+
+![image-20250713184551593](Temp-Cloud笔记图片/image-20250713184551593.png)
+
+索引不支持修改已有字段
+
+索引新增字段
+
+![image-20250713184938310](Temp-Cloud笔记图片/image-20250713184938310.png)
+
+##### 文档
+
+新增文档
+
+![image-20250713185657377](Temp-Cloud笔记图片/image-20250713185657377.png)
+
+查询文档
+
+GET /索引名称/_doc/文档id
+
+删除文档
+
+DELETE /索引名称/_doc/文档id
+
+更新文档
+
+全量修改（删除旧文档并新增，如果没有旧文档则仅新增）
+
+![image-20250713190028682](Temp-Cloud笔记图片/image-20250713190028682.png)
+
+增量修改（仅修改指定的字段）
+
+![image-20250713190236916](Temp-Cloud笔记图片/image-20250713190236916.png)
+
+##### 批量处理
+
+示例
+
+![image-20250713190713977](C:\CRIM\Program\Web\Resources\Documentation\JavaWeb\Temp-Cloud笔记图片\image-20250713190713977.png)
+
+
+
+#### 基本操作
+
+ES 7及以下使用JavaRestClient作为客户端
+
+![image-20250713195808706](Temp-Cloud笔记图片/image-20250713195808706.png)
+
+##### 索引
+
+![image-20250713200930793](Temp-Cloud笔记图片/image-20250713200930793.png)
+
+![image-20250713201112114](Temp-Cloud笔记图片/image-20250713201112114.png)
+
+##### 文档
+
+该新增API也可用于全量修改
+
+![image-20250713202306198](Temp-Cloud笔记图片/image-20250713202306198.png)
+
+![image-20250713202813933](Temp-Cloud笔记图片/image-20250713202813933.png)
+
+![image-20250713202848566](Temp-Cloud笔记图片/image-20250713202848566.png)
+
+![image-20250713203946618](Temp-Cloud笔记图片/image-20250713203946618.png)
+
+##### 批处理
+
+示例
+
+![image-20250713204334333](Temp-Cloud笔记图片/image-20250713204334333.png)
