@@ -1,8 +1,8 @@
 # 概述
 
+<p/>
 
-
-
+<p/>
 
 本笔记始建于2025/03/25，用于总和JavaWeb所有必须的技术栈
 
@@ -276,7 +276,7 @@ connection.close(); // 实质上归还了连接而不是立即关闭连接
 
 ### Markdown
 
-
+<p/>
 
 #### 概述
 
@@ -355,7 +355,7 @@ y = x<sub>1</sub><sup>2</sup> + x<sub>2</sub><sup>2</sup>
 
 ##### 文本居中
 
-使用HTML标签`<center>`来居中文本
+使用HTML标签`<center>`来居中文本（Github不支持）
 
 示例：
 
@@ -363,7 +363,7 @@ y = x<sub>1</sub><sup>2</sup> + x<sub>2</sub><sup>2</sup>
 
 ##### 文本颜色
 
-使用HTML标签`<font color="color">`或`<p style="color: color;">`来实现文本颜色
+使用HTML标签`<font color="color">`或`<p style="color: color;">`来实现文本颜色（Github不支持）
 
 示例：
 
@@ -381,7 +381,7 @@ y = x<sub>1</sub><sup>2</sup> + x<sub>2</sub><sup>2</sup>
 
 ##### 任务列表
 
-使用`- []`和`- [x]`的形式创建任务列表
+使用`- []`和`- [x]`的形式创建任务列表（Github已停用）
 
 示例：
 
@@ -404,7 +404,7 @@ y = x<sub>1</sub><sup>2</sup> + x<sub>2</sub><sup>2</sup>
 
 ##### 脚注
 
-在任意位置使用`[^标签名称]: 文本内容`创建脚注，并在任意位置使用`[^标签名称]`来引用脚注
+在任意位置使用`[^标签名称]: 文本内容`创建脚注，并在任意位置使用`[^标签名称]`来引用脚注。该功能在Github和部分Markdown渲染器上会将脚注渲染到页面底部，并支持跳转。
 
 示例：
 
@@ -460,9 +460,9 @@ y = x<sub>1</sub><sup>2</sup> + x<sub>2</sub><sup>2</sup>
 
 示例：
 
-查看我的[Github主页][1]
+查看我的[Github主页][2]
 
-[1]: https://github.com/Hydrated-Water	"Github主页"
+[2]: https://github.com/Hydrated-Water	"Github主页"
 
 ##### 定位点
 
@@ -564,9 +564,9 @@ graph TD;
 
 球的体积公式：$$ V = (4/3) \pi r^3 $$
 
- 
 
- 
+
+
 
 ### Lombok
 
