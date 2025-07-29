@@ -274,6 +274,300 @@ connection.close(); // 实质上归还了连接而不是立即关闭连接
 
 
 
+### Markdown
+
+
+
+#### 概述
+
+Markdown 是一门轻量级标记语言，用于编写结构化文档，由John Gruber和Aaron Swartz于2004年开发，是目前最受欢迎的标记语言之一，其本质是以`.md`为`.markdown`扩展名的纯文本文件。Markdown应用程序通过将Markdown格式的文本转换为HTML来实现Markdown的渲染，但它有比HTML简便的多的语法，使其极易上手，广泛运用于团队协作、笔记、网页或其他文档。
+
+
+
+#### 标准
+
+由于John Gruber并未明确地对Markdown语法做出规范，社区存在大量的语法标准，虽然大部分基础语法是通用的，但部分标准、应用程序实现了一些扩展语法
+
+- [CommonMark](https://commonmark.org/) 一套标准的、明确的且通用的语法规范
+- [GitHub Flavored Markdown Spec (GFM)](https://github.github.com/gfm/) 事实上的标准，最为流行
+
+
+
+#### 参考
+
+一些关于Markdown语法的参考文档
+
+- [Github 参考文档](https://docs.github.com/zh/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax)
+- [Markdown Guide](https://www.markdownguide.org/basic-syntax/)
+
+
+
+#### 高级技巧
+
+注意：不同Markdown应用程序的支持度不同，尤其是HTML标签
+
+##### 转义
+
+使用反斜杠`\`来转义特殊符号，包括：
+
+- \\
+- \`
+- \*
+- \_
+- \{\}
+- \[\]
+- \<\>
+- \(\)
+- \#
+- \+
+- \-
+- \.
+- \!
+- \|
+
+当使用`<p>`标签时，标签内的Markdown语法将无法使用，如：
+
+<p># **这里**有一些*特殊符号*，[但它们不起作用](http://localhost/)</p>
+
+##### 换行
+
+使用`<br/>`来实现换行
+
+示例：
+
+文本行1<br/>文本行2
+
+##### 下划线
+
+使用HTML标签`<ins>`来实现下划线
+
+示例：
+
+这是一段被<ins>强调的文字</ins>
+
+##### 上下标
+
+使用HTML标签`<sup>`和`<sub>`来实现上标与下标
+
+示例：
+
+y = x<sub>1</sub><sup>2</sup> + x<sub>2</sub><sup>2</sup>
+
+##### 文本居中
+
+使用HTML标签`<center>`来居中文本
+
+示例：
+
+<center>被居中的文本</center>
+
+##### 文本颜色
+
+使用HTML标签`<font color="color">`或`<p style="color: color;">`来实现文本颜色
+
+示例：
+
+<font color="#2FBFDF">蓝色文本</font>
+
+<p style="color: #5FAF1F;">绿色文本</p>
+
+##### 水平线
+
+使用`---`来实现水平线
+
+示例：
+
+---
+
+##### 任务列表
+
+使用`- []`和`- [x]`的形式创建任务列表
+
+示例：
+
+- [x] 完成
+- [ ] 未完成
+
+##### 表情符号
+
+如果使用UTF-8，可以直接使用Emoji，参考[Emoji Pedia](https://emojipedia.org/)等网站
+
+示例：
+
+✔️❌
+
+也可以以`:短代码:`的形式使用表情符号
+
+示例：
+
+:heavy_check_mark::x:
+
+##### 脚注
+
+在任意位置使用`[^标签名称]: 文本内容`创建脚注，并在任意位置使用`[^标签名称]`来引用脚注
+
+示例：
+
+我的Github主页[^1]
+
+[^1]: [Hydrated-Water的Github主页](https://github.com/Hydrated-Water)
+
+##### 引用文本
+
+使用`> 引用文本`实现引用文本，并且引用可以嵌套
+
+示例：
+
+> 这是一个引用
+>
+> > 这是嵌套的引用
+
+通过`> [!警报类型]`的形式可以实现带颜色或图表的强调性引用文本，警报类型包括：
+
+- NOTE
+- TIP
+- IMPORTANT
+- WARNING
+- CAUTION
+
+示例：
+
+> [!NOTE]
+>
+> 注意事项
+
+> [!TIP]
+>
+> 提示信息
+
+> [!IMPORTANT]
+>
+> 重要信息
+
+> [!WARNING]
+>
+> 警告
+
+> [!Caution]
+>
+> 强烈警告
+
+##### 引用链接
+
+在任意位置通过`[标签名称]: 链接 "链接标题"`的形式创建可被引用的链接，其中链接标题是可选的
+
+在任意位置通过`[提示文本][标签名称]`的形式来引用对应的链接
+
+示例：
+
+查看我的[Github主页][1]
+
+[1]: https://github.com/Hydrated-Water	"Github主页"
+
+##### 定位点
+
+使用HTML定位点标记`<a name="unique-name"></a>`和指向定位点的链接`[hint](#name)`来实现定位点，在一些Markdown应用程序上使用`Ctrl+鼠标左键`使用
+
+示例：
+
+<a name="unique-name"></a>
+
+[hint](#unique-name)
+
+或者引用标题
+
+[返回目录](#概述)
+
+##### 图片
+
+使用`![提示](图片链接)`的形式实现图片
+
+示例：
+
+ ![头像](https://avatars.githubusercontent.com/u/63622631)
+
+##### 链接图片
+
+通过将普通链接的链接文字部分替换为图片即可实现带链接的图片：`[![提示](图片链接)](链接)`
+
+示例：
+
+ [![头像](https://avatars.githubusercontent.com/u/63622631)](https://github.com/Hydrated-Water)
+
+##### 折叠文本
+
+可以使用HTML标签`<details>`创建可折叠的部分，其中该标签可配置属性`open`使其处于默认打开状态
+
+`<details>`标签可以有`<summary>`子标签用做提示
+
+<details>一些文字</details>
+
+<details open><summary>这是提示</summary>一些文字</details>
+
+##### 对齐表格
+
+将表格控制标题的连字符`---`替换为`:---`、`:---:`、`---:`来实现对应列的左对齐、居中和右对齐
+
+| 定义 | 描述 |       示例 |
+| :-- | :--: | ---------: |
+| #    | 标题 | # 这是标题 |
+
+##### 关系图
+
+Github支持四种关系图，它们均通过声明带对应语法标识符的代码块来实现
+
+- Mermaid
+
+  Mermaid是一个基于JavaScript的图表绘制工具。用户可以通过简单的类似Markdown的语法创建包括流程图、序列图、类图、状态图、饼图、ER图等多种类型在内的图表，目前以在或通过Github、Gitee、VS Code插件及多款Markdown编辑器集成或支持。参考[Mermaid官方网站](https://mermaid.js.org/#/)
+
+- ASCII STL
+
+  可用于创建交互式的3D模型
+
+- GeoJSON
+
+  可用于创建交互式的地图
+
+- TopoJSON
+
+  可用于创建交互式的地图
+
+示例：
+
+查看Mermaid版本
+
+```mermaid
+info
+```
+
+
+
+简单的图表
+
+```mermaid
+graph TD;
+    A-->B;
+    A-->C;
+    B-->D;
+    C-->D;
+```
+
+##### 数学表达式
+
+可使用符号`$`包围来使用内联LaTeX格式的数学表达式
+
+示例：
+
+圆的面积公式：$S = 2 \pi r^2$
+
+可使用符号`$$`包围来使用LaTeX格式的数学表达式块
+
+球的体积公式：$$ V = (4/3) \pi r^3 $$
+
+ 
+
+ 
+
 ### Lombok
 
 ==TODO 空的章节==
@@ -4589,4 +4883,5 @@ https://mybatis.org/mybatis-3/zh_CN/sqlmap-xml.html
 ### SpEL
 
 ==TODO 空的章节==
+
 
