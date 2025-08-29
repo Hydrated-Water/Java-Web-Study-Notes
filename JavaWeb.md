@@ -1,8 +1,8 @@
 # 概述
 
-<p/>
 
-<p/>
+
+
 
 本笔记始建于2025/03/25，用于总和JavaWeb所有必须的技术栈
 
@@ -276,7 +276,7 @@ connection.close(); // 实质上归还了连接而不是立即关闭连接
 
 ### Markdown
 
-<p/>
+
 
 #### 概述
 
@@ -329,13 +329,21 @@ Markdown 是一门轻量级标记语言，用于编写结构化文档，由John 
 
 <p># **这里**有一些*特殊符号*，[但它们不起作用](http://localhost/)</p>
 
-##### 换行
+##### 换行与空行
 
-使用`<br/>`来实现换行
+使用`<br/>`来实现换行或空行
 
 示例：
 
 文本行1<br/>文本行2
+
+不间断空白符`&nbsp;`可用于创建空行
+
+示例：
+
+文本行1
+&nbsp;
+文本行2
 
 ##### 下划线
 
@@ -518,7 +526,7 @@ Github支持四种关系图，它们均通过声明带对应语法标识符的�
 
 - Mermaid
 
-  Mermaid是一个基于JavaScript的图表绘制工具。用户可以通过简单的类似Markdown的语法创建包括流程图、序列图、类图、状态图、饼图、ER图等多种类型在内的图表，目前以在或通过Github、Gitee、VS Code插件及多款Markdown编辑器集成或支持。参考[Mermaid官方网站](https://mermaid.js.org/#/)
+  Mermaid是一个基于JavaScript的图表绘制工具。用户可以通过简单的类似Markdown的语法创建包括流程图、序列图、类图、状态图、饼图、ER图等多种类型在内的图表，目前以在或通过Github、Gitee、VS Code插件及多款Markdown编辑器集成或支持。参考[Mermaid官方网站](https://mermaid.js.org/#/)以查找[文档](https://mermaid.js.org/intro/)并使用[在线编辑器](https://mermaid.live/edit)
 
 - ASCII STL
 
@@ -4883,5 +4891,4 @@ https://mybatis.org/mybatis-3/zh_CN/sqlmap-xml.html
 ### SpEL
 
 ==TODO 空的章节==
-
 

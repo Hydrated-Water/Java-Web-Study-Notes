@@ -23,6 +23,146 @@
 
 
 
+### Redis
+
+
+
+#### 概述
+
+Redis，全称Remote Dictionary Server，是一个基于内存的NoSQL键值数据库
+
+NoSQL的特点：
+
+- 非结构化
+- 关联性差
+- 非SQL
+- 基本事务或无事务支持
+
+Redis是单线程的，命令具备原子性，Redis 6之后更新了对网络处理的多线程处理
+
+Redis支持持久化、主从集群、分片集群
+
+可在[官方文档](https://redis.io/docs/latest/)中查找基本教程或所有命令
+
+#### Docker部署
+
+```bash
+docker pull redis
+docker run --name <my-redis-name> -p 6379:6379 -d redis
+docker exec -it <redis-container-id> bash
+redis-cli
+```
+
+#### 数据结构与命令
+
+##### 概述
+
+key一般是String类型
+
+value的常见类型包括：
+
+- String
+
+- Hash
+
+  `{name: "FOOBAR", age: 18}`
+
+- List
+
+  `[A -> B -> C]`
+
+- Set
+
+  `{A, B, C}`
+
+- SortedSet
+
+  `{A: 1, B: 2, C: 3}`
+
+- GEO
+
+  `{A: (123.4, 567,8) }`
+
+- BitMap
+
+  `01001101`
+
+- HyperLog
+
+  `01001101`
+
+前五种为基本类型
+
+##### Key的结构
+
+key可以通过使用符号`:`形成多层级结构，可用于实现命名空间
+
+##### 通用命令
+
+- HELP [command]
+
+  查询一个命令的使用方式
+
+- KEYS [pattern]
+
+  查找匹配pattern的key，可用于模糊查询，性能较差，易造成服务器阻塞
+
+- EXISTS [key ...]
+
+  查找一个或多个key是否存在，返回值为integer
+
+- EXPIRE [key] [seconds]
+
+  设置key的有效期
+
+- TTL [key]
+
+  查询key的剩余有效期，返回-1表示永久，-2表示已删除
+
+- DEL [key ...]
+
+  删除一个或多个key
+
+##### String类型及命令
+
+![image-20250829171741388](Temp-Cloud笔记图片/image-20250829171741388.png)
+
+![image-20250829171908529](Temp-Cloud笔记图片/image-20250829171908529.png)
+
+##### Hash类型及命令
+
+Hash类型的Value是一个无序字典，以`field`为键，以`value`为值
+
+![image-20250829173300186](Temp-Cloud笔记图片/image-20250829173300186.png)
+
+##### List类型及命令
+
+List类型的value是一个双向链表，特点是有序、可重复元素、插入和删除性能高、查询速度性能较差
+
+可用于实现列表、栈、队列/阻塞队列
+
+![image-20250829173655665](Temp-Cloud笔记图片/image-20250829173655665.png)
+
+注意LPUSH等命令插入多个元素时，按顺序逐个插入，这将导致实际的顺序与字面相反
+
+##### Set类型及命令
+
+Set类型的value相当于field的value为null的Hash，具有无序、元素不可重复、高性能、支持集合运算等特点
+
+![image-20250829180128770](Temp-Cloud笔记图片/image-20250829180128770.png)
+
+![image-20250829180219646](Temp-Cloud笔记图片/image-20250829180219646.png)
+
+##### SortedSet类型及命令
+
+SortedSet是一个可排序的集合，基于跳表和哈希表实现，基于元素的score来排序，具有可排序、元素不可重复、查询速度快等特点
+
+![image-20250829180528299](Temp-Cloud笔记图片/image-20250829180528299.png)
+
+注意上述命令均是升序，使用`REV`使该命令按降序执行，如ZREVRANK是ZRANK的降序
+
+
+
 ### Docker
 
 https://docs.docker.com
