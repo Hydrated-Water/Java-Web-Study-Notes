@@ -308,6 +308,10 @@ public String hello() {
 
 ### Docker
 
+
+
+#### 概述
+
 https://docs.docker.com
 
 
@@ -324,7 +328,7 @@ docker run -d --name mysql3306 -p 3306:3306 -e TZ=Asia/Shanghai -e MYSQL_ROOT_PA
 
 
 
-常用命令
+#### 常用命令
 
 - `docker pull` 从远程镜像仓库拉取镜像到本地
 - `docker push` 将本地镜像推送到远程镜像仓库
@@ -343,7 +347,7 @@ docker run -d --name mysql3306 -p 3306:3306 -e TZ=Asia/Shanghai -e MYSQL_ROOT_PA
 
 
 
-数据卷（volume）
+#### 数据卷 volume
 
 由于在容器内管理文件和文件内容较为繁琐，可使用数据卷进行映射
 
@@ -371,9 +375,15 @@ docker run -d --name nginx -p 80:80 -v outer:/usr/share/nginx/html nginx
 
 部分镜像默认存在数据卷挂载，如mysql，但mysql使用的是匿名卷，每次新建容器都会创建一个唯一ID作为名称的数据卷
 
+> [!NOTE]
+>
+> 如果使用的是Windows上的Docker Desktop，那么简单的`-v name:/path`无法直接通过访问本地磁盘文件或WSL的发行版Linux系统中的文件来访问数据卷，而是需要通过访问`\\wsl$\docker-desktop`或`\\wsl$\docker-desktop-data`（视具体Docker Desktop版本而定）
+>
+> 在较高的Docker Desktop版本中，WSL发行版`docker-desktop-data`可能不在使用，而是仅使用`docker-desktop`，此时数据卷的位置可能位于`docker-desktop`的`/mnt/docker-desktop-disk/data/docker/volumes`
 
 
-自定义镜像
+
+#### 自定义镜像
 
 ![image-20250619145816729](Temp-Cloud笔记图片/image-20250619145816729.png)
 
@@ -421,7 +431,7 @@ docker build -t myapp:1.0 .
 
 
 
-容器网络
+#### 容器网络
 
 所有容器位于`127.17.0.0/16`，网关为`127.17.0.1`作为虚拟网桥
 
@@ -442,7 +452,7 @@ docker build -t myapp:1.0 .
 
 
 
-DockerCompose
+#### DockerCompose
 
 通过`docker-compose.yml`来定义一组容器的部署
 
