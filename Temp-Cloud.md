@@ -789,6 +789,146 @@ Nacos作为一个单独服务运行，本身也需要数据源，可使用MySQL
 
 
 
+#### Nacos
+
+##### 概述
+
+[Nacos官方文档](https://nacos.io/docs/latest/overview/)
+
+Nacos `/nɑ:kəʊs/` 是 `Dynamic Naming and Configuration Service` 的首字母简称，提供了一组简单易用的特性，用于快速实现动态服务发现、服务配置、服务元数据、流量管理等功能
+
+Nacos支持大多数主流服务发现、配置、管理：
+
+- [Kubernetes Service](https://kubernetes.io/docs/concepts/services-networking/service/)
+- [gRPC](https://grpc.io/docs/guides/concepts.html#service-definition)
+- [Dubbo RPC Service](https://dubbo.apache.org/)
+- [Spring Cloud RESTful Service](https://spring.io/projects/spring-cloud)
+- [Model Context Protocol](https://modelcontextprotocol.io/introduction)
+
+##### 技术架构
+
+![Nacos架构图](Temp-Cloud笔记图片/nacos_3_0_overview.svg)
+
+##### 数据模型
+
+Nacos 数据模型由三元组唯一确定，分别是命名空间（Namespace），分组（Group）和资源名；其中资源名按照功能模块的不同，可以分为服务名（ServiceName），配置名（DataId）和MCP服务（McpName）
+
+![Nacos数据模型图](Temp-Cloud笔记图片/nacos_data-model.svg)
+
+其中`DataId`采取`package.class`（如`com.example.chat.ai.log.level`）的命名规则保证全局唯一性，包含小写字母和`-`、`_`、`.`、`:`符号，不超过256字节
+
+`Group`建议采取`产品名:模块名`（如`com.example.chat:ai`）保证全局唯一性，只允许英文字符和`-`、`_`、`.`、`:`符号，不超过128字节
+
+##### 部署模式
+
+Nacos提供了两种部署模式：单机模式和集群模式
+
+![Nacos部署模式图](Temp-Cloud笔记图片/nacos_deploy-structure.svg)
+
+单机模式适用于开发和测试环境，默认使用Derby内置数据库
+
+集群模式适用于生产环境，默认使用外部数据库
+
+##### 访问方式
+
+Nacos提供了多种环境（Java、Go、Python等）下的客户端依赖，用于微服务实例访问Nacos
+
+Java SDK参考[github项目地址](https://github.com/alibaba/nacos)或[官方文档](https://nacos.io/docs/latest/ecology/use-nacos-with-spring-cloud/)
+
+Nacos 3.0提供了多种类型的Open API：
+
+- Client Open API：用于客户端、服务实例，保障返回结果的一致性和较短的响应时间及性能
+- Admin Open API：用于运维或管理、监控、审计，用于不保证确定性的大规模数据检索等场景
+- Console Open API：用于控制台
+
+Nacos Open API访问协议包括：
+
+- gRPC：用于Client Open API以保障性能
+- HTTP 1.1：用于所有类型的API以提供兼容性
+
+##### HelloWorld for Nacos
+
+1. 使用Docker部署单机Nacos（使用Derby内嵌数据库），并指定访问令牌生成密钥、身份认证Key和Value
+
+   ```bash
+   docker run --name nacos -e MODE=standalone -e NACOS_AUTH_TOKEN=${your_nacos_auth_secret_token} -e NACOS_AUTH_IDENTITY_KEY=${your_nacos_server_identity_key} -e NACOS_AUTH_IDENTITY_VALUE=${your_nacos_server_identity_value} -p 8080:8080 -p 8848:8848 -p 9848:9848 -p 9849:9849 -d nacos/nacos-server:latest
+   ```
+
+   由于部分端口常被占用，建议更改端口映射
+
+   其中`8848`、`9848`、`9849`端口通常应对外开放
+
+2. 访问Web控制台（`http://ip:8080/`或`http://ip:8848/nacos`），修改控制台用户密钥
+
+3. 对需要进行服务注册和发现的子模块引入依赖（前置参考[HelloWorld for Spring Cloud Alibaba](#HelloWorld for Spring Cloud Alibaba)章节）
+
+   ```xml
+   <dependency>
+       <groupId>com.alibaba.cloud</groupId>
+       <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+   </dependency>
+   ```
+
+4. 配置Nacos地址
+
+   ```properties
+   spring.cloud.nacos.server-addr=127.0.0.1:8848
+   ```
+
+5. 新增配置`@EnableDiscoveryClient`（非必须）
+
+   ```java
+   @Configuration
+   @EnableDiscoveryClient
+   public class GlobalConfig {
+   }
+   ```
+
+6. 启动服务实例，访问Web控制台或调用HTTP接口以确认服务实例被注册
+
+   ```http
+   GET http://127.0.0.1:8848/nacos/v3/client/ns/instance/list?serviceName=HelloWorld
+   ```
+
+7. 简单的手动服务发现与负载均衡测试
+
+   ```java
+   @Autowired
+   private DiscoveryClient discoveryClient;
+   
+   @RequestMapping("/rc/test2")
+   public String rcTest2(
+           @RequestParam(value = "port", required = false, defaultValue = "8180") Integer port,
+           @RequestParam(value = "time", required = false, defaultValue = "5000") Integer time
+   ) {
+       List<ServiceInstance> instances = discoveryClient.getInstances("Provider");
+       log.debug("service \"Provider\" instances : {}", instances);
+       if (instances.isEmpty()) {
+           return "No service \"Provider\" instances found";
+       }
+       String url = instances.get(new Random().nextInt(instances.size())).getUri().toString() + "/test?time={time}";
+       try {
+           String result = RestClient.create().get()
+                   .uri(url, Map.of("time", time))
+                   .retrieve().body(String.class);
+           return "Response from \"" + url + "\" : " + result;
+       }
+       catch (RuntimeException e) {
+           return "Error from \"" + url + "\" : " + e;
+       }
+   }
+   ```
+
+
+
+##### 端口
+
+- 8080 用于Web控制台，在Nacos 2.X中控制台的位置位于端口8848的`/nacos`路径
+- 8848 主端口，用于服务注册、发现、管理
+- 9848 用于RPC协议
+- 9849 用于RPC协议
+- 7848 用于集群间通讯
+
 
 
 ### 远程调用
