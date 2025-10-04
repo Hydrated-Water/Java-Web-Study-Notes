@@ -468,18 +468,23 @@ docker build -t myapp:1.0 .
 
 
 
-工具
+#### 问题与背景
 
-JMeter压力测试
-
-
-
-单体架构在大型项目中的问题：
+单体架构在大型项目中的暴露出的问题
 
 - 团队协作
 - 构建、打包、发布
 - 可用性
 - 系统资源
+
+具体而言包括：
+
+- 代码业务功能之间耦合严重
+- 小规模改动也需要大规模构建和重新部署
+- 高负载业务功能难以水平扩展按需伸缩
+- 单一技术栈导致项目技术僵化
+- 开发团队过大导致沟通与协作困难
+- 单一功能故障影响应用全局
 
 
 
@@ -517,11 +522,168 @@ SpringCloud是一款热门的微服务框架，其集成了大量的已有的优
 
 Spring Cloud对微服务组件制定了统一的标准，各公司提供了实现标准的组件集，如Spring Cloud Alibaba
 
-引入依赖管理后无需手动选择各组件的版本
-
-![image-20250620141324109](Temp-Cloud笔记图片/image-20250620141324109.png)
 
 
+#### HelloWorld for Spring Cloud Alibaba
+
+Spring Cloud Alibaba（简称SCA）是阿里巴巴提供的一套成熟的技术栈，参考[Spring官方文档](https://spring.io/projects/spring-cloud-alibaba)和[阿里云官方文档](https://sca.aliyun.com/)
+
+1. 使用 spring initializer / IDEA-新建项目-Spring Boot 工具创建 Spring Boot 3 项目
+
+2. 删除源码文件，更改POM为聚合项目
+
+   - 继承`spring-boot-starter-parent`
+   - 声明子模块
+   - 声明依赖管理`spring-cloud-dependencies`和`spring-cloud-alibaba-dependencies`
+
+   ```xml
+   <?xml version="1.0" encoding="UTF-8"?>
+   <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+       <modelVersion>4.0.0</modelVersion>
+   
+       <parent>
+           <groupId>org.springframework.boot</groupId>
+           <artifactId>spring-boot-starter-parent</artifactId>
+           <version>3.2.4</version>
+           <relativePath/>
+       </parent>
+   
+       <groupId>com.crim.web.lab</groupId>
+       <artifactId>SpringCloudAlibabaHelloWorld</artifactId>
+       <version>0.0.1-SNAPSHOT</version>
+       <packaging>pom</packaging>
+   
+       <name>Spring Cloud Alibaba HelloWorld</name>
+       <description>Spring Cloud Alibaba HelloWorld</description>
+   
+       <!-- 子模块声明 -->
+       <modules>
+   
+       </modules>
+   
+       <!-- 属性声明 -->
+       <properties>
+           <java.version>17</java.version>
+           <spring-boot.version>3.2.4</spring-boot.version>
+           <spring-cloud.version>2023.0.1</spring-cloud.version>
+           <spring-cloud-alibaba.version>2023.0.1.0</spring-cloud-alibaba.version>
+       </properties>
+   
+       <!-- 依赖管理声明 -->
+       <dependencyManagement>
+           <dependencies>
+               <!-- Spring Cloud -->
+               <dependency>
+                   <groupId>org.springframework.cloud</groupId>
+                   <artifactId>spring-cloud-dependencies</artifactId>
+                   <version>${spring-cloud.version}</version>
+                   <type>pom</type>
+                   <scope>import</scope>
+               </dependency>
+               <!-- Spring Cloud Alibaba -->
+               <dependency>
+                   <groupId>com.alibaba.cloud</groupId>
+                   <artifactId>spring-cloud-alibaba-dependencies</artifactId>
+                   <version>${spring-cloud-alibaba.version}</version>
+                   <type>pom</type>
+                   <scope>import</scope>
+               </dependency>
+           </dependencies>
+       </dependencyManagement>
+   
+   </project>
+   ```
+
+3. 使用 spring initializer / IDEA-新建模块-Spring Boot 工具创建 Spring Boot 3 子模块
+
+4. 修改POM使其继承自聚合模块
+
+   ```xml
+   <?xml version="1.0" encoding="UTF-8"?>
+   <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+       <modelVersion>4.0.0</modelVersion>
+       
+       <parent>
+           <groupId>com.crim.web.lab</groupId>
+           <artifactId>SpringCloudAlibabaHelloWorld</artifactId>
+           <version>0.0.1-SNAPSHOT</version>
+       </parent>
+       
+       <groupId>com.crim.web.lab.scahelloworld</groupId>
+       <artifactId>helloworld</artifactId>
+       <version>0.0.1-SNAPSHOT</version>
+       
+       <name>Hello World</name>
+       <description>Hello World</description>
+       
+       <dependencies>
+           <dependency>
+               <groupId>org.springframework.boot</groupId>
+               <artifactId>spring-boot-starter-web</artifactId>
+           </dependency>
+   
+           <dependency>
+               <groupId>org.springframework.boot</groupId>
+               <artifactId>spring-boot-starter-test</artifactId>
+               <scope>test</scope>
+           </dependency>
+       </dependencies>
+   
+       <build>
+           <plugins>
+               <plugin>
+                   <groupId>org.springframework.boot</groupId>
+                   <artifactId>spring-boot-maven-plugin</artifactId>
+               </plugin>
+           </plugins>
+       </build>
+   
+   </project>
+   ```
+
+5. 进行依赖管理与声明
+
+6. 编写简单的接口和业务代码
+
+7. 启动子模块服务，在IDEA服务-添加-运行配置-Spring Boot中添加该启动配置
+
+8. 可修改更多的服务启动配置项，实现多实例部署等高级部署形式
+
+
+
+#### 依赖管理与版本对照
+
+上述章节中提到的对`spring-cloud-dependencies`和`spring-cloud-alibaba-dependencies`POM的导入的核心作用是导入这些POM所定义的`dependencyManagement`，即Spring Cloud和Spring Cloud Alibaba已经定义了一系列微服务组件及框架、库的版本，通过导入这些POM避免繁杂的依赖版本兼容性确认
+
+通过参考文档中Spring Boot、Spring Cloud、Spring Cloud Alibaba版本之间的对应关系进行声明：
+
+- [Spring Cloud与Spring Boot版本对应关系](https://spring.io/projects/spring-cloud)
+
+- [Spring Boot、Spring Cloud、Spring Cloud Alibaba版本对应关系](https://sca.aliyun.com/docs/2023/overview/version-explain/)
+
+- [Spring Cloud 2023.0 依赖版本声明](https://github.com/spring-cloud/spring-cloud-release/wiki/Spring-Cloud-2023.0-Release-Notes)
+
+如 Spring Cloud 2023.0 声明以下依赖版本
+
+- Spring Cloud Vault `4.1.1` ([issues](https://github.com/spring-cloud/spring-cloud-vault/releases/tag/v4.1.1))
+- Spring Cloud Bus `4.1.1` ([issues](https://github.com/spring-cloud/spring-cloud-bus/releases/tag/v4.1.1))
+- Spring Cloud Zookeeper `4.1.1` ([issues](https://github.com/spring-cloud/spring-cloud-zookeeper/releases/tag/v4.1.1))
+- Spring Cloud Kubernetes `3.1.1` ([issues](https://github.com/spring-cloud/spring-cloud-kubernetes/releases/tag/v3.1.1))
+- Spring Cloud Task `3.1.1` ([issues](https://github.com/spring-cloud/spring-cloud-task/releases/tag/v3.1.1))
+- Spring Cloud Function `4.1.1` ([issues](https://github.com/spring-cloud/spring-cloud-function/releases/tag/v4.1.1))
+- Spring Cloud Commons `4.1.2` ([issues](https://github.com/spring-cloud/spring-cloud-commons/releases/tag/v4.1.2))
+- Spring Cloud Openfeign `4.1.1` ([issues](https://github.com/spring-cloud/spring-cloud-openfeign/releases/tag/v4.1.1))
+- Spring Cloud Circuitbreaker `3.1.1` ([issues](https://github.com/spring-cloud/spring-cloud-circuitbreaker/releases/tag/v3.1.1))
+- Spring Cloud Starter Build `2023.0.1` ([issues](https://github.com/spring-cloud/spring-cloud-starter-build/releases/tag/v2023.0.1))
+- Spring Cloud Stream `4.1.1` ([issues](https://github.com/spring-cloud/spring-cloud-stream/releases/tag/v4.1.1))
+- Spring Cloud Gateway `4.1.2` ([issues](https://github.com/spring-cloud/spring-cloud-gateway/releases/tag/v4.1.2))
+- Spring Cloud Consul `4.1.1` ([issues](https://github.com/spring-cloud/spring-cloud-consul/releases/tag/v4.1.1))
+- Spring Cloud Contract `4.1.2` ([issues](https://github.com/spring-cloud/spring-cloud-contract/releases/tag/v4.1.2))
+- Spring Cloud Config `4.1.1` ([issues](https://github.com/spring-cloud/spring-cloud-config/releases/tag/v4.1.1))
+- Spring Cloud Build `4.1.1` ([issues](https://github.com/spring-cloud/spring-cloud-build/releases/tag/v4.1.1))
+- Spring Cloud Netflix `4.1.1` ([issues](https://github.com/spring-cloud/spring-cloud-netflix/releases/tag/v4.1.1))
 
 
 
@@ -630,6 +792,74 @@ Nacos作为一个单独服务运行，本身也需要数据源，可使用MySQL
 
 
 ### 远程调用
+
+
+
+#### 概述
+
+使用普通的HTTP客户端进行远程调用
+
+示例
+
+服务hellworld [8081/8082]
+
+```java
+@RequestMapping("/rc/test")
+public String rcTest(
+        @RequestParam(value = "port", required = false, defaultValue = "8180") Integer port,
+        @RequestParam(value = "time", required = false, defaultValue = "5000") Integer time) {
+    String url = "http://localhost:" + port + "/test?time={time}";
+    try {
+        String result = RestClient.create().get()
+                .uri(url, Map.of("time", time))
+                .retrieve().body(String.class);
+        return "Response from \"" + url + "\" : " + result;
+    }
+    catch (RuntimeException e) {
+        return "Error from \"" + url + "\" : " + e;
+    }
+}
+```
+
+服务provider [8180/8181/8182]
+
+```java
+@RequestMapping("/test")
+public String test(@RequestParam(value = "time", required = false, defaultValue = "5000") Integer time) {
+    try {
+        Thread.sleep(time);
+    }
+    catch (InterruptedException e) {
+        log.error("error", e);
+    }
+    return "Provider Test : time delay = " + time + "ms";
+}
+```
+
+示例请求
+
+```http
+get http://localhost:8081/rc/test?port=8182&time=1000
+```
+
+多实例部署可便于：
+
+- 提高可用性，避免单一服务崩溃导致应用全局不可用
+- 渐进式发布，避免同时更新导致的服务短暂不可用或更新失败服务回滚影响业务全局
+
+但是上述示例仍需要解决：
+
+- 服务注册与发现
+
+  一个服务需要能够知道其他服务的地址与状态
+
+- 负载均衡
+
+  多个实例的负载应均衡
+
+- 代码重复
+
+  应避免重复编写HTTP接口调用代码
 
 
 
