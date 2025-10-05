@@ -869,9 +869,12 @@ Nacos Open API访问协议包括：
    </dependency>
    ```
 
-4. 配置Nacos地址
+4. 配置服务名和Nacos地址
+
+   注意服务名不应包括非法字符（如空格）
 
    ```properties
+   spring.application.name=HelloWorld
    spring.cloud.nacos.server-addr=127.0.0.1:8848
    ```
 
@@ -1000,6 +1003,115 @@ get http://localhost:8081/rc/test?port=8182&time=1000
 - 代码重复
 
   应避免重复编写HTTP接口调用代码
+
+
+
+#### OpenFeign
+
+##### 概述
+
+OpenFeign是一个声明式的HTTP客户端，通过Java到HTTP端点的绑定实现便捷的HTTP调用
+
+[OpenFeign Github](https://github.com/OpenFeign/feign)
+
+[Spring Cloud OpenFeign 文档](https://spring.io/projects/spring-cloud-openfeign#overview)
+
+如果需要Spring Cloud LoadBalancer，可参考[Spring Cloud LoadBalancer 文档](https://docs.spring.io/spring-cloud-commons/reference/spring-cloud-commons/loadbalancer.html)
+
+OpenFeign技术概览
+
+![MindMap 概述](C:\CRIM\Program\Web\Resources\Documentation\JavaWeb\Temp-Cloud笔记图片\OpenFeign技术概览.png)
+
+##### HelloWorld for OpenFeign
+
+1. 在需要的子模块-POM-添加启动器-Spring Cloud Routing选中OpenFeign和LoadBalancer依赖（前置参考[HelloWorld for Nacos](#HelloWorld for Nacos)章节），或手动修改POM添加OpenFeign和LoadBalancer依赖
+
+   LoadBalancer通常是必须的，否则OpenFeign无法正常初始化Bean
+
+   ```xml
+   <dependency>
+       <groupId>org.springframework.cloud</groupId>
+       <artifactId>spring-cloud-starter-openfeign</artifactId>
+   </dependency>
+   <dependency>
+       <groupId>org.springframework.cloud</groupId>
+       <artifactId>spring-cloud-starter-loadbalancer</artifactId>
+   </dependency>
+   ```
+
+2. 配置`EnableFeignClients`注解并定义HTTP客户端的包
+
+   如果未定义包可能会导致`@FeignClient`无法正确地被扫描（`EnableFeignClients`默认扫描其所在类的包及其子包）
+
+   ```java
+   @EnableFeignClients("com.example.helloworld.client")
+   public class GlobalConfig {
+   }
+   ```
+
+3. 编写HTTP客户端，可以使用Spring MVC提供的注解
+
+   习惯上可以将HTTP客户端类置于`client`包中
+
+   ```java
+   @FeignClient(name = "Provider")
+   public interface ProviderServiceClient {
+       
+       @GetMapping("/test")
+       String test(@RequestParam(value = "time", required = false, defaultValue = "5000") Integer time);
+       
+   }
+   ```
+
+4. 自动装配并调用
+
+   ```java
+   @Autowired
+   private ProviderServiceClient providerServiceClient;
+   
+   @RequestMapping("/rc/test3")
+   public String rcTest3(
+           @RequestParam(value = "time", required = false, defaultValue = "5000") Integer time
+   ) {
+       try{
+           return "Response from \"Provider\" : "+providerServiceClient.test(time);
+       }
+       catch (RuntimeException e) {
+           return "Error from \"Provider\" : " + e;
+       }
+   }
+   ```
+
+5. 进行简单的HTTP调用测试，并动态地增减服务实例
+
+   ```http
+   GET http://localhost:8081/rc/test3?time=1
+   ```
+
+   可以发现默认使用轮询的方式进行负载均衡
+
+
+
+##### 连接池
+
+OpenFeign默认未使用连接池，可通过简单的配置使用连接池
+
+1. 引入依赖
+
+   ```xml
+   <dependency>
+       <groupId>io.github.openfeign</groupId>
+       <artifactId>feign-okhttp</artifactId>
+   </dependency>
+   ```
+
+2. 修改配置（不同版本的Spring Cloud配置项可能不同）
+
+   ```properties
+   spring.cloud.openfeign.okhttp.enabled=true
+   ```
+
+在笔者的测试中（1实例调用1~3实例）未发现连接池在性能上的明显优化
 
 
 
