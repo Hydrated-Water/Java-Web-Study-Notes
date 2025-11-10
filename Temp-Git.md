@@ -29,14 +29,14 @@ Git 为现代软件开发的全流程提供了核心支持：
 
 ![流程图](Temp-Git笔记图片/git-architecture.png)
 
-##### 速查表
+#### 速查表
 
-仓库
+##### 仓库
 
 - `git init` 创建一个新仓库
 - `git clone <url>` 克隆一个已有仓库
 
-暂存
+##### 暂存
 
 - `git add <file>` 添加未跟踪的文件或未暂存的更改
 - `git add .` 添加所有未跟踪的文件和未暂存的更改
@@ -48,13 +48,13 @@ Git 为现代软件开发的全流程提供了核心支持：
 - `git reset` 取消所有暂存的文件
 - `git status` 检查已添加的文件
 
-提交
+##### 提交
 
 - `git commit` 提交更改并打开文本编辑器以用于写入提交信息
 - `git commit -m 'message'` 提交更改
 - `git commit -am 'message'` 提交所有未暂存的更改
 
-分支
+##### 分支
 
 - `git switch <name>`/`git checkout <name>` 切换分支
 - `git switch -c <name>`/`git checkout -c <name>` 创建分支
@@ -62,13 +62,13 @@ Git 为现代软件开发的全流程提供了核心支持：
 - `git branch -d <name>` 删除分支
 - `git branch -D <name>` 强制删除分支
 
-暂存差异
+##### 暂存差异
 
 - `git diff HEAD` 比较所有已暂存和未暂存的更改
 - `git diff --staged` 比较已暂存更改
 - `git diff` 比较未暂存更改
 
-提交差异
+##### 提交差异
 
 - `git show <commit>` 显示提交与其父提交之间的差异
 - `git diff <commit> <commit>` 比较两个提交
@@ -84,7 +84,7 @@ Git 为现代软件开发的全流程提供了核心支持：
 > - 当前提交 `HEAD`
 > - 3个提交之前 `HEAD~3`
 
-放弃更改
+##### 放弃更改
 
 - `git restore <file>`/`git checkout <file>` 删除指定文件的未暂存更改
 - `git restore --staged --worktree <file>`/`git checkout HEAD <file>` 删除对指定文件的所有暂存和未暂存更改
@@ -92,13 +92,13 @@ Git 为现代软件开发的全流程提供了核心支持：
 - `git clean` 删除未跟踪的文件
 - `git stash` 将所有已暂存和未暂存的更改保存到快照
 
-修改历史记录
+##### 修改历史记录
 
 - `git reset HEAD^` 撤销最近一次提交
 - `git rebase -i HEAD~6` 将最后5个提交合并为一个
 - `git commit --amend` 修改最后一次提交
 
-查看历史记录
+##### 查看历史记录
 
 - `git log main`/`git log --graph main`/`git log --oneline` 查看分支的历史记录
 - `git log <file>` 查看所有更改过指定文件的提交
@@ -106,7 +106,7 @@ Git 为现代软件开发的全流程提供了核心支持：
 - `git log -G <regex>` 查看所有匹配指定正则或文本的提交
 - `git blame <file>` 查看指定文件的每一行的修改者
 
-合并分支
+##### 合并分支
 
 - `git merge <branch>` 简单合并
 
@@ -189,15 +189,15 @@ Git 为现代软件开发的全流程提供了核心支持：
 
   ![img](data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjwhRE9DVFlQRSBzdmcgUFVCTElDICItLy9XM0MvL0RURCBTVkcgMS4xLy9FTiIKICJodHRwOi8vd3d3LnczLm9yZy9HcmFwaGljcy9TVkcvMS4xL0RURC9zdmcxMS5kdGQiPgo8IS0tIEdlbmVyYXRlZCBieSBncmFwaHZpeiB2ZXJzaW9uIDEzLjEuMiAoMjAyNTA4MDguMjMyMCkKIC0tPgo8IS0tIFRpdGxlOiBHIFBhZ2VzOiAxIC0tPgo8c3ZnIHdpZHRoPSI0MzlwdCIgaGVpZ2h0PSIxOTVwdCIKIHZpZXdCb3g9IjAuMDAgMC4wMCA0MzkuMDAgMTk1LjAwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIj4KPGcgaWQ9ImdyYXBoMCIgY2xhc3M9ImdyYXBoIiB0cmFuc2Zvcm09InNjYWxlKDEgMSkgcm90YXRlKDApIHRyYW5zbGF0ZSg0IDE5MS4yKSI+Cjx0aXRsZT5HPC90aXRsZT4KPCEtLSBBIC0tPgo8ZyBpZD0ibm9kZTEiIGNsYXNzPSJub2RlIj4KPHRpdGxlPkE8L3RpdGxlPgo8cG9seWdvbiBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBzdHJva2Utd2lkdGg9IjMiIHBvaW50cz0iNDMuMiwtMTE1LjIgMCwtMTE1LjIgMCwtNzIgNDMuMiwtNzIgNDMuMiwtMTE1LjIiLz4KPHRleHQgeG1sOnNwYWNlPSJwcmVzZXJ2ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iMjEuNiIgeT0iLTg2LjQiIGZvbnQtZmFtaWx5PSJtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMjQuMDAiPkE8L3RleHQ+CjwvZz4KPCEtLSBCIC0tPgo8ZyBpZD0ibm9kZTIiIGNsYXNzPSJub2RlIj4KPHRpdGxlPkI8L3RpdGxlPgo8cG9seWdvbiBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBzdHJva2Utd2lkdGg9IjMiIHBvaW50cz0iMTE1LjIsLTExNS4yIDcyLC0xMTUuMiA3MiwtNzIgMTE1LjIsLTcyIDExNS4yLC0xMTUuMiIvPgo8dGV4dCB4bWw6c3BhY2U9InByZXNlcnZlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSI5My42IiB5PSItODYuNCIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSIyNC4wMCI+QjwvdGV4dD4KPC9nPgo8IS0tIEEmIzQ1OyZndDtCIC0tPgo8ZyBpZD0iZWRnZTQiIGNsYXNzPSJlZGdlIj4KPHRpdGxlPkEmIzQ1OyZndDtCPC90aXRsZT4KPHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSJibGFjayIgc3Ryb2tlLXdpZHRoPSIzIiBkPSJNNDQuMzgsLTkzLjZDNTIuNzksLTkzLjYgNjIuMzEsLTkzLjYgNzAuNzIsLTkzLjYiLz4KPC9nPgo8IS0tIEMgLS0+CjxnIGlkPSJub2RlMyIgY2xhc3M9Im5vZGUiPgo8dGl0bGU+QzwvdGl0bGU+Cjxwb2x5Z29uIGZpbGw9Im5vbmUiIHN0cm9rZT0iYmxhY2siIHN0cm9rZS13aWR0aD0iMyIgcG9pbnRzPSIxODcuMiwtMTE1LjIgMTQ0LC0xMTUuMiAxNDQsLTcyIDE4Ny4yLC03MiAxODcuMiwtMTE1LjIiLz4KPHRleHQgeG1sOnNwYWNlPSJwcmVzZXJ2ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iMTY1LjYiIHk9Ii04Ni40IiBmb250LWZhbWlseT0ibW9ub3NwYWNlIiBmb250LXNpemU9IjI0LjAwIj5DPC90ZXh0Pgo8L2c+CjwhLS0gQiYjNDU7Jmd0O0MgLS0+CjxnIGlkPSJlZGdlNSIgY2xhc3M9ImVkZ2UiPgo8dGl0bGU+QiYjNDU7Jmd0O0M8L3RpdGxlPgo8cGF0aCBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBzdHJva2Utd2lkdGg9IjMiIGQ9Ik0xMTYuMzgsLTkzLjZDMTI0Ljc5LC05My42IDEzNC4zMSwtOTMuNiAxNDIuNzIsLTkzLjYiLz4KPC9nPgo8IS0tIEQgLS0+CjxnIGlkPSJub2RlNCIgY2xhc3M9Im5vZGUiPgo8dGl0bGU+RDwvdGl0bGU+Cjxwb2x5Z29uIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2YxNGUzMiIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtZGFzaGFycmF5PSI1LDIiIHBvaW50cz0iMTg3LjIsLTQzLjIgMTQ0LC00My4yIDE0NCwwIDE4Ny4yLDAgMTg3LjIsLTQzLjIiLz4KPHRleHQgeG1sOnNwYWNlPSJwcmVzZXJ2ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iMTY1LjYiIHk9Ii0xNC40IiBmb250LWZhbWlseT0ibW9ub3NwYWNlIiBmb250LXNpemU9IjI0LjAwIj5EPC90ZXh0Pgo8L2c+CjwhLS0gQiYjNDU7Jmd0O0QgLS0+CjxnIGlkPSJlZGdlOCIgY2xhc3M9ImVkZ2UiPgo8dGl0bGU+QiYjNDU7Jmd0O0Q8L3RpdGxlPgo8cGF0aCBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBzdHJva2Utd2lkdGg9IjMiIGQ9Ik0xMTYuMzgsLTcwLjgyQzEyNC43OSwtNjIuNDEgMTM0LjMxLC01Mi44OSAxNDIuNzIsLTQ0LjQ4Ii8+CjwvZz4KPCEtLSBEMiAtLT4KPGcgaWQ9Im5vZGU2IiBjbGFzcz0ibm9kZSI+Cjx0aXRsZT5EMjwvdGl0bGU+Cjxwb2x5Z29uIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2YxNGUzMiIgc3Ryb2tlLXdpZHRoPSIzIiBwb2ludHM9IjI1OS4yLC0xMTUuMiAyMTYsLTExNS4yIDIxNiwtNzIgMjU5LjIsLTcyIDI1OS4yLC0xMTUuMiIvPgo8dGV4dCB4bWw6c3BhY2U9InByZXNlcnZlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSIyMzcuNiIgeT0iLTg2LjQiIGZvbnQtZmFtaWx5PSJtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMjQuMDAiPkTigLI8L3RleHQ+CjwvZz4KPCEtLSBDJiM0NTsmZ3Q7RDIgLS0+CjxnIGlkPSJlZGdlNiIgY2xhc3M9ImVkZ2UiPgo8dGl0bGU+QyYjNDU7Jmd0O0QyPC90aXRsZT4KPHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSJibGFjayIgc3Ryb2tlLXdpZHRoPSIzIiBkPSJNMTg4LjM4LC05My42QzE5Ni43OSwtOTMuNiAyMDYuMzEsLTkzLjYgMjE0LjcyLC05My42Ii8+CjwvZz4KPCEtLSBFIC0tPgo8ZyBpZD0ibm9kZTUiIGNsYXNzPSJub2RlIj4KPHRpdGxlPkU8L3RpdGxlPgo8cG9seWdvbiBmaWxsPSJub25lIiBzdHJva2U9IiNmMTRlMzIiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWRhc2hhcnJheT0iNSwyIiBwb2ludHM9IjI1OS4yLC00My4yIDIxNiwtNDMuMiAyMTYsMCAyNTkuMiwwIDI1OS4yLC00My4yIi8+Cjx0ZXh0IHhtbDpzcGFjZT0icHJlc2VydmUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjIzNy42IiB5PSItMTQuNCIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSIyNC4wMCI+RTwvdGV4dD4KPC9nPgo8IS0tIEQmIzQ1OyZndDtFIC0tPgo8ZyBpZD0iZWRnZTkiIGNsYXNzPSJlZGdlIj4KPHRpdGxlPkQmIzQ1OyZndDtFPC90aXRsZT4KPHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSJibGFjayIgc3Ryb2tlLXdpZHRoPSIzIiBkPSJNMTg4LjM4LC0yMS42QzE5Ni43OSwtMjEuNiAyMDYuMzEsLTIxLjYgMjE0LjcyLC0yMS42Ii8+CjwvZz4KPCEtLSBFMiAtLT4KPGcgaWQ9Im5vZGU3IiBjbGFzcz0ibm9kZSI+Cjx0aXRsZT5FMjwvdGl0bGU+Cjxwb2x5Z29uIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2YxNGUzMiIgc3Ryb2tlLXdpZHRoPSIzIiBwb2ludHM9IjMzMS4yLC0xMTUuMiAyODgsLTExNS4yIDI4OCwtNzIgMzMxLjIsLTcyIDMzMS4yLC0xMTUuMiIvPgo8dGV4dCB4bWw6c3BhY2U9InByZXNlcnZlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSIzMDkuNiIgeT0iLTg2LjQiIGZvbnQtZmFtaWx5PSJtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMjQuMDAiPkXigLI8L3RleHQ+CjwvZz4KPCEtLSBEMiYjNDU7Jmd0O0UyIC0tPgo8ZyBpZD0iZWRnZTciIGNsYXNzPSJlZGdlIj4KPHRpdGxlPkQyJiM0NTsmZ3Q7RTI8L3RpdGxlPgo8cGF0aCBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBzdHJva2Utd2lkdGg9IjMiIGQ9Ik0yNjAuMzgsLTkzLjZDMjY4Ljc5LC05My42IDI3OC4zMSwtOTMuNiAyODYuNzIsLTkzLjYiLz4KPC9nPgo8IS0tIG1haW5fbGFiZWwgLS0+CjxnIGlkPSJub2RlOCIgY2xhc3M9Im5vZGUiPgo8dGl0bGU+bWFpbl9sYWJlbDwvdGl0bGU+Cjx0ZXh0IHhtbDpzcGFjZT0icHJlc2VydmUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjE2NS42IiB5PSItMTU4LjQiIGZvbnQtZmFtaWx5PSJtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMjQuMDAiPm1haW48L3RleHQ+CjwvZz4KPCEtLSBtYWluX2xhYmVsJiM0NTsmZ3Q7QyAtLT4KPGcgaWQ9ImVkZ2UxIiBjbGFzcz0iZWRnZSI+Cjx0aXRsZT5tYWluX2xhYmVsJiM0NTsmZ3Q7QzwvdGl0bGU+CjxwYXRoIGZpbGw9Im5vbmUiIHN0cm9rZT0iYmxhY2siIHN0cm9rZS13aWR0aD0iMyIgZD0iTTE2NS42LC0xNDQuMzlDMTY1LjYsLTE0MC4xNyAxNjUuNiwtMTM1LjYyIDE2NS42LC0xMzEuMDQiLz4KPHBvbHlnb24gZmlsbD0iYmxhY2siIHN0cm9rZT0iYmxhY2siIHN0cm9rZS13aWR0aD0iMyIgcG9pbnRzPSIxNjkuMSwtMTMxLjIxIDE2NS42LC0xMjEuMjEgMTYyLjEsLTEzMS4yMSAxNjkuMSwtMTMxLjIxIi8+CjwvZz4KPCEtLSBiYW5hbmFfbGFiZWwgLS0+CjxnIGlkPSJub2RlOSIgY2xhc3M9Im5vZGUiPgo8dGl0bGU+YmFuYW5hX2xhYmVsPC90aXRsZT4KPHRleHQgeG1sOnNwYWNlPSJwcmVzZXJ2ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iMzA5LjYiIHk9Ii0xNTguNCIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSIyNC4wMCI+YmFuYW5hPC90ZXh0Pgo8L2c+CjwhLS0gYmFuYW5hX2xhYmVsJiM0NTsmZ3Q7RTIgLS0+CjxnIGlkPSJlZGdlMiIgY2xhc3M9ImVkZ2UiPgo8dGl0bGU+YmFuYW5hX2xhYmVsJiM0NTsmZ3Q7RTI8L3RpdGxlPgo8cGF0aCBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBzdHJva2Utd2lkdGg9IjMiIGQ9Ik0zMDkuNiwtMTQ0LjM5QzMwOS42LC0xNDAuMTcgMzA5LjYsLTEzNS42MiAzMDkuNiwtMTMxLjA0Ii8+Cjxwb2x5Z29uIGZpbGw9ImJsYWNrIiBzdHJva2U9ImJsYWNrIiBzdHJva2Utd2lkdGg9IjMiIHBvaW50cz0iMzEzLjEsLTEzMS4yMSAzMDkuNiwtMTIxLjIxIDMwNi4xLC0xMzEuMjEgMzEzLjEsLTEzMS4yMSIvPgo8L2c+CjwhLS0gbG9zdF9sYWJlbCAtLT4KPGcgaWQ9Im5vZGUxMCIgY2xhc3M9Im5vZGUiPgo8dGl0bGU+bG9zdF9sYWJlbDwvdGl0bGU+Cjx0ZXh0IHhtbDpzcGFjZT0icHJlc2VydmUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjM5NiIgeT0iLTE0LjQiIGZvbnQtZmFtaWx5PSJtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMjQuMDAiPiZxdW90O2xvc3QmcXVvdDs8L3RleHQ+CjwvZz4KPCEtLSBsb3N0X2xhYmVsJiM0NTsmZ3Q7RSAtLT4KPGcgaWQ9ImVkZ2UzIiBjbGFzcz0iZWRnZSI+Cjx0aXRsZT5sb3N0X2xhYmVsJiM0NTsmZ3Q7RTwvdGl0bGU+CjxwYXRoIGZpbGw9Im5vbmUiIHN0cm9rZT0iYmxhY2siIHN0cm9rZS13aWR0aD0iMyIgZD0iTTM2MS4yNCwtMjEuNkMzMzUuNjYsLTIxLjYgMzAwLjk0LC0yMS42IDI3NC44LC0yMS42Ii8+Cjxwb2x5Z29uIGZpbGw9ImJsYWNrIiBzdHJva2U9ImJsYWNrIiBzdHJva2Utd2lkdGg9IjMiIHBvaW50cz0iMjc1LjA4LC0xOC4xIDI2NS4wOCwtMjEuNiAyNzUuMDgsLTI1LjEgMjc1LjA4LC0xOC4xIi8+CjwvZz4KPC9nPgo8L3N2Zz4K)
 
-恢复文件
+##### 恢复文件
 
 - `git checkout <commit> <file>`/`git restore <file> --source <commit>` 获取指定提交中的指定文件
 
-远程仓库
+##### 远程仓库
 
 - `git remote add <name> <url>` 添加远程仓库
 
-推送更改
+##### 推送更改
 
 - `git push origin main` 将`main`分支推送到`origin`远程仓库
 - `git push` 将当前分支推送到它的远程跟踪分支
@@ -205,21 +205,261 @@ Git 为现代软件开发的全流程提供了核心支持：
 - `git push --force-with-lease` 强制推送
 - `git push --tags` 推送标签
 
-拉取更改
+##### 拉取更改
 
 - `git fetch origin main` 从`origin`远程仓库拉取`main`分支更改但不更改本地分支
 - `git pull --rebase` 拉取更改并对当前分支进行变基
 - `git pull`/`git pull origin main` 拉取更改并合并到当前分支
 
-配置 Git
+##### 配置 Git
 
 - `git config user.name 'Your Name'` 配置一个选项
 - `git config --global ...` 配置全局选项
 - `git config alias.st status` 添加别名
 - `man git-config` 查看所有的可配置项
 
-文件
+##### 文件
 
 - `.git/config` 本地 Git 配置
 - `~/.gitconfig` 全局 Git 配置
 - `.gitignore` 忽略文件列表
+
+#### 配置
+
+##### 配置命令格式
+
+```bash
+git config [--global]|[--system]|[--local] section.key "value"
+```
+
+示例：`git config --global user.email "my_google_email@google.com"`
+
+##### 配置级别
+
+所有配置都存储在特定的配置文件中
+
+- `--system` 系统级，对所有用户生效
+- `--global` 用户级，对当前用户生效
+- `--local` 仓库级，对当前仓库生效
+
+##### 常用配置
+
+- `user.name` 用户姓名
+- `user.email` 用户邮箱，影响远程仓库账户关联
+- `core.editor` 使用的文本编辑器，可使用Vim、VSCode、Nano或其他自定义文本编辑器，默认Vim
+- `init.defaultBranch` `git init`创建仓库时的默认分支名，通常为`main`或`master`
+- `merge.conflictStyle` 合并冲突的信息展示风格，推荐`diff3`，默认`merge`
+- `pull.rebase` `git pull`行为，默认值`false`，当值为`true`时执行`git rebase`而不是`git merge`
+
+#### 创建仓库
+
+##### 基本的
+
+使用`git init`可在当前工作目录中创建一个 Git 仓库，它将在当前工作目录下生成一个`.git`目录以用于存储当前仓库的元数据（包括存储文件、提交记录、分支、标签和配置等）
+
+可使用`git init <path>`指定仓库的创建位置
+
+##### 默认分支
+
+创建一个仓库时将创建一个初始分支（通常是`master`或`main`）
+
+可使用`git init --initial-branch=<branch>`指定初始分支名称，如未指定将使用配置`init.defaultBranch`中的默认初始分支名称
+
+##### 嵌套仓库
+
+假设在路径`/foo`中建立了一个 Git 仓库，那么在子目录`/foo/bar`中再次执行`git init`命令是可行的
+
+这是因为 Git 仓库是基于工作目录中的文件与`.git`中的元数据进行工作，嵌套的 Git 仓库通常不会因为相互影响导致无法正常运行
+
+但是这通常是不推荐的，因为子仓库中的`.git`目录可能会被父仓库跟踪，另外父、子仓库对工作目录中的文件进行的修改操作将互相影响
+
+`git submodule`通常是上述场景的安全替代方案
+
+#### 暂存与提交
+
+##### 概述
+
+![git-stage-and-commit](Temp-Git笔记图片/git-stage-and-commit.png)
+
+##### 添加文件
+
+使用`git add`命令将一个新文件（未跟踪）或已修改/已删除的文件（未暂存）添加到暂存区
+
+可以使用`git add <pathspec>`指定一个文件，或通过通配符如`*`来指定多个文件
+
+示例：
+
+```bash
+git add *.py
+```
+
+可通过`.`符号将所有未跟踪和未暂存的文件添加到暂存区
+
+示例：
+
+```bash
+git add .
+```
+
+`git add`常见有如下选项：
+
+- `-f`/`--force` 暂存包括被`.gitignore`排除在内的所有文件
+- `-i`/`--interactive`或`-p`/`--patch` 提供交互式的界面，以用于选择具体需要暂存的内容
+- `-u`/`--update` 仅暂存已跟踪的文件（修改或删除）
+
+##### 忽略文件
+
+`.gitignore`文件是一个纯文本文件，用于指定一系列文件以排除在版本控制之外
+
+以下常见文件类型通常需要被排除：
+
+- 编译文件
+- 特定于操作系统和IDE的配置文件
+- 临时文件
+- 日志
+- 密钥等敏感信息
+
+通常特定语言、项目有`.gitignore`文件模版（如 Github ），可直接使用
+
+`.gitignore`文件按行存储匹配模式，每一个模式采用 Glob 模式语法：
+
+- 空行：不匹配任何文件，用于提高可读性
+- `#`：注释
+- 文件名：直接匹配该文件名，如`db_password.txt`
+- `*`：匹配0到多个任意字符，如`*.log`
+- `?`：匹配1个任意字符，如`user-?.properties`
+- `[abc]`：匹配其中一个字符，如`user-[123].properties`
+- `dir/`：匹配所有指定名称的目录，如`log/`
+- `/startup.log`：匹配相对于该忽略文件的指定路径
+- `**/`：匹配任意中间目录
+- `!`：取反
+
+`.gitignore`作用于工作区和暂存区之间（通常是`git add`、`git status`命令执行时），对于已跟踪的文件（位于本地仓库或暂存区），需要手动将这些文件移除
+
+一个 Git 本地仓库可能存在多个`.gitignore`文件，一个`.gitignore`文件的所有模式均相对于该`.gitignore`所在目录生效，子目录中的`.gitignore`优先级高于父目录`.gitignore`
+
+##### 查看与差异
+
+使用`git status`命令查看当前提交（`HEAD`）、暂存区与工作区之间的区别，包括已暂存的文件、未暂存或未跟踪的文件（未被`.gitignore`排除）等信息
+
+可使用`-v`/`--verbose`选项显示详细信息
+
+`git diff`命令提供比`git status`命令更丰富的功能，可用于查看指定提交、当前提交、暂存区、工作区之间的指定范围内的区别
+
+`git log`命令常用于查看本地仓库的历史变更，包括各分支和各提交，并提供一定程度上的图形化展示
+
+##### 提交
+
+使用`git commit`将暂存区的内容提交到本地仓库
+
+这将创建一个提交，新的提交是`HEAD`提交的直接子节点，位于当前分支的顶端，随后该分支将被更新以指向它
+
+一个提交将包含如下元数据：
+
+- 作者（Author），包括姓名、邮件和时间
+- 提交者（Committer），包括姓名、邮件和时间
+- 父提交指针，其中根提交（第一个提交）没有父提交指针，合并提交可能有多个父提交指针
+- 提交信息
+
+`git commit`常见有如下选项：
+
+- `-a`/`--all` 将所有已跟踪（在暂存区）且已修改或已删除（在工作区）的文件添加到暂存区后提交
+- `-m <msg>` 直接在命令行输入提交信息而不是使用文本编辑器，支持多个`-m`选项以生成多行提交信息
+- `-p`/`--patch` 交互式提交
+- `--amend` 修正上一次提交而不是创建一个新提交（这将修改提交ID）
+- `--reset-author` 与`--amend`联用，以用于修改作者
+- `-v`/`--verbose` 显示详细信息
+
+##### 提交ID
+
+Git 使用一个40字符的十六进制字符串唯一地标识一个提交（通常基于SHA-1生成），如`de7647184a5e77611a0a069a770633b7a731f31c`
+
+Git 允许使用提交ID的前导部分来唯一地指向一个提交，通常需要前7个或更多的字符，如`de76471`
+
+另外，分支和标签也间接地指向一个提交，因此也可使用分支和标签指向一个提交
+
+##### 提交信息
+
+提交信息需要明确且简要地说明一次提交所涉及的变更、原因和可能的影响，因此通常采用[Conventional Commits](https://www.conventionalcommits.org/)约定式提交规范
+
+提交信息格式：
+
+```
+<类型 type>[范围 scope]: <描述 description>
+
+[正文 body]
+
+[脚注 footer(s)]
+```
+
+- 类型（type）
+
+  必须说明本次提交的类型，通常包括：
+
+  - `feat` 新增功能
+  - `fix` 修复bug
+  - `docs` 文档变更
+  - `style` 代码格式变动（不影响代码运行）
+  - `refactor` 代码重构（不新增功能也不修复bug）
+  - `perf` 性能优化
+  - `test` 新增或修改测试
+  - `chore` 杂项修改（可能涉及构建、辅助工具、依赖项等）
+  - `build` 构建或依赖修改
+  - `ci` 持续集成相关修改
+  - `revert` 回滚版本
+
+- 范围（scope）
+
+  可以描述本次提交涉及的模块、组件、文件范围
+
+  示例：`feat(user-auth)`、`fix(AdminService.java)`
+
+- 描述（description）
+
+  简短地描述本次提交，通常使用祈使句，首字母小写且句尾不加句号
+
+  示例：`feat(user-auth): 新增管理员用户登录安全邮件发送`、`fix(AdminService.java): fix a bug about admin account unexpectedly frequently offline`
+
+- 正文（body）
+
+  可以详细地描述本次提交的原因、具体修改和可能的影响
+
+- 脚注（footer(s)）
+
+  常用于破坏性API变更（不兼容改动）或引用、关联某些信息（如某个Issue等）
+
+  示例：`Fixes #123`
+
+- 破坏性变更（Breaking Change）
+
+  当一个修改将破坏现有的兼容性（如修改或删除了某API、数据结构、接口、行为、依赖项等导致升级前后的代码无法通用），需要在提交信息中指明
+
+  格式：
+
+  ```
+  <类型>[范围][!]: <描述>
+  
+  [正文]
+  
+  [BREAKING CHANGE: <破坏性变更描述>]
+  [其他脚注]
+  ```
+
+##### 暂存与恢复
+
+`git restore`命令是较新版本的 Git 提供的功能，用于替代部分`git checkout`和`git reset`命令功能，以用于实现暂存区和工作区的文件恢复
+
+`git restore`命令可以撤销工作区的更改（使用当前提交或暂存区的内容进行覆盖），或撤销暂存区的内容（使用当前提交的内容进行覆盖），也可以从指定的提交中恢复内容
+
+##### 提交与回滚
+
+`git reset`通过移动当前分支的`HEAD`指针到指定的提交以实现版本回退
+
+`git reset`可以指定回退的行为，用于控制是否对暂存区和工作区也进行修改
+
+##### 移动与删除
+
+`git rm`用于从暂存区或/和工作区中删除指定的文件、目录或文件范围，以实现对特定文件的停止跟踪，相当于系统文件删除与`git add`命令的组合
+
+`git mv`用于移动和重命名工作区中的文件、目录或文件范围，并修改对应的 Git 索引
+
